@@ -1,0 +1,165 @@
+{
+  "_source": "https://github.com/kalyvask/interview-prep/blob/main/src/content/companies.ts",
+  "_synced": "2026-05-05",
+  "companies": [
+    {
+      "slug": "openai",
+      "name": "OpenAI",
+      "tc": "$860K median TC",
+      "pass_rate": "<2% pass rate",
+      "one_liner": "Highest technical bar in the industry. PPU-driven comp. Mirrors Meta's PM loop almost exactly.",
+      "structure": "Recruiter screen → hiring manager → final loop (behavioral, product sense, analytical, culture). For SWE roles: 60-min system design at phone screen AND onsite. PM candidates on AI-heavy teams may encounter similar depth.",
+      "what_they_test": [
+        "Specific model architectures — they will probe.",
+        "AGI-timeline thinking baked into product decisions.",
+        "Safety embedded inside product sense, not separated into its own round.",
+        "Real math during prioritization."
+      ],
+      "where_system_thinking": "Inside product sense. Separate model-layer from app-layer. Address safety without being prompted.",
+      "red_flag": "No named architectures. Vague 'AI for X' answers. Treating safety as an afterthought.",
+      "sample_questions": [
+        "Design the system for a real-time coding agent",
+        "Build the architecture for a multi-modal research assistant",
+        "How would you design the retrieval system for ChatGPT's memory feature?",
+        "Design a system that identifies and mitigates hallucinations at scale"
+      ]
+    },
+    {
+      "slug": "anthropic",
+      "name": "Anthropic",
+      "tc": "$468K median TC",
+      "one_liner": "Safety-first. Dedicated safety round. If you don't volunteer safety thinking — auto −2 points.",
+      "structure": "8–9 rounds including take-home. Product sense, analytics, behavioral, culture/values, dedicated AI safety & ethics round.",
+      "what_they_test": [
+        "Safety as the primary constraint, not a checkbox.",
+        "Constitutional AI, RLHF, red teaming, alignment, adversarial robustness — used naturally.",
+        "How you decide under uncertainty and weigh long-term consequences.",
+        "Connection to Anthropic's mission in product framing."
+      ],
+      "where_system_thinking": "System design for technical roles focuses on practical inference-API and GPU-server problems. Every product sense answer should frame how a feature builds user trust.",
+      "red_flag": "Safety mentioned only when prompted. Using Claude on the take-home (explicit constraint).",
+      "sample_questions": [
+        "Design the evaluation system for Claude's tool use capabilities",
+        "Build an agent system for enterprise workflow automation",
+        "How would you architect a jailbreak detection system?",
+        "Design a churn prediction and intervention system for Claude API users"
+      ]
+    },
+    {
+      "slug": "google-deepmind",
+      "name": "Google DeepMind",
+      "tc": "$425K median TC",
+      "pass_rate": "~50% committee approval",
+      "one_liner": "Standalone technical interview removed for PMs — fluency is tested inside other rounds.",
+      "structure": "Initial → skills → final → decision. Virtual-first. Role-specific guidance shared in advance. Technical PM roles get written exercises and 30–45 min rounds.",
+      "what_they_test": [
+        "Earning the respect of engineers — system thinking that holds up.",
+        "Googleyness round = where safety + values get tested.",
+        "Process matters as much as the answer; structured thinking above all.",
+        "Vibe coding round active in India, expanding globally."
+      ],
+      "where_system_thinking": "Inside product sense and Googleyness. 'Can you explain your AI design to a grandmother?' is a real probe.",
+      "red_flag": "Skipping the explainability question. Process-free leaps to a solution.",
+      "sample_questions": [
+        "Design the ranking system for YouTube Shorts recommendations",
+        "Build the system architecture for Gemini's multi-modal reasoning",
+        "Architect a search system combining traditional retrieval with LLM re-ranking",
+        "Design an AI agent for Google Workspace that handles email triage"
+      ]
+    },
+    {
+      "slug": "meta-ai",
+      "name": "Meta AI",
+      "tc": "$563K median TC",
+      "one_liner": "New 'Product Sense with AI' round for IC6+. Outsourcing your thinking to AI = rejection.",
+      "structure": "Product sense, analytical thinking, behavioral. Added 'Product Sense with AI' round in 2025–2026 for IC6+ and M1/M2 levels. SWE: 45-min system design + AI-assisted coding round (deployed 2026).",
+      "what_they_test": [
+        "Critique AI suggestions during the interview — don't accept blindly.",
+        "ML-specific metrics in the analytical round (precision, recall, F1). Every claim has a number.",
+        "Architecture that handles billions-of-users scale by default."
+      ],
+      "where_system_thinking": "Embedded across rounds. Analytical round is data-driven, ML-fluent. 50% of Meta PMs have non-technical degrees — skills > credentials.",
+      "red_flag": "Accepting AI-generated suggestions without critique. Hand-wave on scale.",
+      "sample_questions": [
+        "Design a content recommendation system using LLMs for understanding and ML models for ranking",
+        "Build the architecture for a multi-language AI moderation system",
+        "Design AI-generated post summaries at scale",
+        "Design an AI agent that helps creators optimize their Reels content"
+      ]
+    },
+    {
+      "slug": "amazon-agi",
+      "name": "Amazon AGI",
+      "tc": "$325K median TC",
+      "one_liner": "Leadership Principles govern everything. Dive Deep + Ownership. Cost obsession in system design.",
+      "structure": "Around the 16 Leadership Principles. STAR mandatory. PR/FAQ exercise 48 hours before onsite. Bar Raiser has veto. 45–60 min per round.",
+      "what_they_test": [
+        "Customer Obsession, Ownership, Dive Deep — most-tested for AI roles.",
+        "Cost-optimized architecture as a system-design domain alongside scale, reliability, security.",
+        "Build vs buy as a frequent probe.",
+        "Building and reasoning with AI agents — not just classifiers."
+      ],
+      "where_system_thinking": "Dedicated system-design rounds. Alexa+, Amazon Q, conversational AI in scope.",
+      "red_flag": "Weak Leadership Principle stories. Architectures that ignore unit economics.",
+      "sample_questions": [
+        "Design the system architecture for Alexa's proactive suggestion engine",
+        "Build an AI agent for sellers on Amazon Marketplace",
+        "Architect a fraud detection system using both ML and LLM components",
+        "Design automated product listing optimization using AI"
+      ]
+    },
+    {
+      "slug": "netflix",
+      "name": "Netflix",
+      "tc": "$586K median TC",
+      "one_liner": "Unanimous approval. Keeper Test. Culture memo is mandatory reading.",
+      "structure": "Any single negative vote kills candidacy. Culture-alignment tested throughout.",
+      "what_they_test": [
+        "Whether your manager would fight to retain you.",
+        "ML platform PMs: deep ML infra knowledge.",
+        "Culture-memo alignment in every answer."
+      ],
+      "where_system_thinking": "ML platform interviews push hard on infrastructure (training, serving, eval).",
+      "red_flag": "Skipping the culture memo. Generic answers to 'what would your manager say?'",
+      "sample_questions": [
+        "Design the recommendation system for Netflix originals",
+        "Architect an A/B testing platform for ML models at Netflix scale"
+      ]
+    },
+    {
+      "slug": "apple",
+      "name": "Apple",
+      "tc": "$301K median TC",
+      "one_liner": "8–12 rounds. On-device AI, edge compute, model compression, privacy-first design.",
+      "structure": "Most comprehensive process. 45–60 min technical screen with senior engineer.",
+      "what_they_test": [
+        "Privacy as a primary constraint, not a feature.",
+        "On-device inference, quantization, edge tradeoffs.",
+        "User empathy + privacy threaded through every round."
+      ],
+      "where_system_thinking": "Technical screen explicitly tests on-device system thinking. Cloud-first architectures lose points.",
+      "red_flag": "Cloud-only AI architectures. Ignoring quantization or distillation as options.",
+      "sample_questions": [
+        "Design an on-device personalization system for the Photos app",
+        "Architect a privacy-preserving health insights system"
+      ]
+    },
+    {
+      "slug": "nvidia",
+      "name": "Nvidia",
+      "tc": "$262K median TC",
+      "one_liner": "Highest technical bar of any company. GPU + CUDA questions. 5+ hours back-to-back.",
+      "structure": "Long technical loops. Architecture, compute, kernel-level thinking.",
+      "what_they_test": [
+        "GPU computing architecture and CUDA fluency.",
+        "Endurance — multi-hour back-to-back rounds."
+      ],
+      "where_system_thinking": "All of it. PMs without compute fluency are filtered early.",
+      "red_flag": "Surface-level GPU knowledge. Confusing memory hierarchy.",
+      "sample_questions": [
+        "Design a training-data pipeline that saturates 8x H100 nodes",
+        "Architect an inference-serving stack across heterogeneous GPUs"
+      ]
+    }
+  ]
+}

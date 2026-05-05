@@ -808,6 +808,99 @@ def generate_email_plain(jobs: list) -> str:
     return "\n".join(lines)
 
 
+@app.route("/api/prep/generate", methods=["POST"])
+def api_generate_prep():
+    """Generate an LLM-powered interview prep doc for a job by ID.
+
+    Looks up the job in the latest report, calls Claude to generate the prep,
+    and writes Markdown + DOCX to outputs/prep/. Returns the file paths.
+
+    Required env: ANTHROPIC_API_KEY. Required config: cv path via
+    ROLE_RADAR_CV_PATH env var (or pass `cv_path` in the request body).
+    """
+    data = request.json or {}
+    job_id = data.get("job_id")
+    do_review = bool(data.get("review", False))
+    if not job_id:
+        return jsonify({"error": "job_id is required"}), 400
+
+    # Locate CV
+    cv_path_str = data.get("cv_path") or os.getenv("ROLE_RADAR_CV_PATH")
+    if not cv_path_str:
+        return jsonify({
+            "error": "No CV configured. Set ROLE_RADAR_CV_PATH in your .env or pass cv_path in the request."
+        }), 400
+    cv_path = Path(cv_path_str)
+    if not cv_path.exists():
+        return jsonify({"error": f"CV not found at {cv_path}"}), 400
+
+    # Find the job in the latest report
+    from role_radar.cv_parser import parse_cv
+    from role_radar.interview_prep import (
+        PrepGenerationError,
+        generate_prep_for_job,
+        render_review_markdown,
+        review_prep_doc,
+    )
+    from role_radar.interview_prep.report_loader import (
+        find_jobs_in_report,
+        find_latest_report,
+        load_report,
+    )
+
+    outputs_dir = Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR))
+    report_path = find_latest_report(outputs_dir)
+    if report_path is None:
+        return jsonify({"error": "No report found in outputs directory."}), 404
+
+    report_data = load_report(report_path)
+    matches = find_jobs_in_report(report_data, job_id=job_id)
+    if not matches:
+        return jsonify({"error": f"Job {job_id} not found in {report_path.name}"}), 404
+
+    _, job = matches[0]
+
+    try:
+        cv_signals = parse_cv(cv_path)
+        candidate_name = os.getenv("ROLE_RADAR_CANDIDATE_NAME", "Candidate")
+        prep_doc, md_path, docx_path = generate_prep_for_job(
+            job=job,
+            cv=cv_signals,
+            candidate_name=candidate_name,
+            output_dir=outputs_dir / "prep",
+            cv_excerpt=cv_signals.raw_text,
+            write_docx=True,
+        )
+    except PrepGenerationError as e:
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        return jsonify({"error": f"Unexpected error: {e}"}), 500
+
+    review_summary = None
+    if do_review:
+        try:
+            report = review_prep_doc(md_path.read_text(encoding="utf-8"))
+            review_md = render_review_markdown(report)
+            with open(md_path, "a", encoding="utf-8") as f:
+                f.write(review_md)
+            review_summary = {
+                "score": report.overall_score,
+                "findings": len(report.findings),
+                "recommendation": report.ship_recommendation,
+            }
+        except Exception as e:
+            review_summary = {"error": str(e)}
+
+    return jsonify({
+        "success": True,
+        "company": job.company,
+        "title": job.title,
+        "markdown_path": str(md_path),
+        "docx_path": str(docx_path) if docx_path else None,
+        "review": review_summary,
+    })
+
+
 @app.route("/api/email/send", methods=["POST"])
 def api_send_email():
     """API endpoint to send the job report via email."""

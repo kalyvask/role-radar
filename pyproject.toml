@@ -53,6 +53,9 @@ dev = [
 openai = [
     "openai>=1.0.0",
 ]
+interview = [
+    "anthropic>=0.40.0",
+]
 
 [project.scripts]
 role-radar = "role_radar.main:app"
@@ -61,7 +64,7 @@ role-radar = "role_radar.main:app"
 where = ["src"]
 
 [tool.setuptools.package-data]
-role_radar = ["templates/*.html", "templates/*.txt", "data/*.yaml", "data/*.csv", "web/templates/*.html", "web/static/*"]
+role_radar = ["templates/*.html", "templates/*.txt", "data/*.yaml", "data/*.csv", "web/templates/*.html", "web/static/*", "../../data/interview_prep/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

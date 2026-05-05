@@ -1,0 +1,73 @@
+{
+  "_source": "https://github.com/kalyvask/interview-prep/blob/main/src/content/frameworks.ts",
+  "_synced": "2026-05-05",
+  "dasme": [
+    {"letter": "D", "name": "Define scope and user context", "time_share": "15%", "minutes": "3–4 min", "body": "Sharper than product-design clarification — you're scoping a technical system. Pick ONE user segment, ONE primary pain, ONE timeline. Move on. Cap at 4 minutes.", "prompts": ["Can I pick a specific domain to ground this?", "What's the primary objective — one metric to optimize?", "Should I think of this as a single service or a multi-agent system?"]},
+    {"letter": "A", "name": "Architect the agent system", "time_share": "30%", "minutes": "~12 min", "body": "Won or lost here. Draw the diagram. Share screen. Use Miro, FigJam, or Slides. Every AI system has four layers — interaction, orchestration, agents, data + infrastructure. Skip orchestration and the interviewer will ask.", "prompts": ["Does this structure make sense before I go deeper into the model layer?"]},
+    {"letter": "S", "name": "Specify data and model layer", "time_share": "25%", "minutes": "~10 min", "body": "Three things interviewers push on: what data feeds the system (specific signals, not 'user data'), which models and why (memorize the selection table), and what about memory (episodic, session, semantic).", "prompts": ["We don't always want to use an LLM when a traditional ML model will do."]},
+    {"letter": "M", "name": "Map metrics and monitoring", "time_share": "15%", "minutes": "~5 min", "body": "Three cascading layers: model metrics → UX metrics → business metrics. Say the cascade out loud and translate one metric delta into dollars.", "prompts": ["These metrics cascade. Model quality drives user experience, which drives business outcomes."]},
+    {"letter": "E", "name": "Edge cases, failure modes, scale", "time_share": "15%", "minutes": "~5 min", "body": "Three failure modes you must always cover: model goes down (circuit breaker), latency spikes (≤30s threshold, escalate), repetitive responses or frustration (hand off). For 10x scale: name the bottleneck FIRST, then propose concrete fixes.", "prompts": ["Wrong: 'We'd add more servers.' Right: 'Bottleneck is the LLM API at ~200ms per call. Cache top 500 patterns covering ~40% of volume, on-premise distilled voice model, shard vector DB by region.'"]}
+  ],
+  "model_selection": [
+    {"task": "Tabular prediction (churn, fraud, LTV, demand)", "use": "XGBoost / Random Forest / Gradient Boosted Trees", "why": "Faster, cheaper, interpretable. ~100x less than LLM per prediction. Stakeholders can audit."},
+    {"task": "Ranking (feeds, search, recommendations)", "use": "Learning-to-rank (LambdaMART, neural LTR) on engagement signals", "why": "Trained on your own data. Better at ordering than a general LLM."},
+    {"task": "Retrieval (search, RAG)", "use": "Hybrid BM25 + dense embeddings with a classifier router", "why": "BM25 wins on exact terms. Dense wins on intent. Pure either fails."},
+    {"task": "High-volume classification (moderation, spam, intent)", "use": "Fine-tuned BERT / DistilBERT", "why": "10ms vs 200ms+ for LLM. At scale, 100–1000x cheaper."},
+    {"task": "Nuanced reasoning, conversation, synthesis across docs", "use": "LLM (Claude / GPT-4 / Gemini)", "why": "Only tool that can reason across unstructured context."},
+    {"task": "Deterministic business rules, safety gates, compliance", "use": "Rules engine — NOT a model", "why": "Auditable, business-configurable. Models can't be trusted here."},
+    {"task": "Edge / on-device (keyboard, camera, offline)", "use": "Distilled or quantized small models", "why": "Latency + privacy."},
+    {"task": "Multi-step autonomous workflow", "use": "Multi-agent with orchestrator + per-agent specialization", "why": "A single omniscient agent is the #1 fail pattern."}
+  ],
+  "anti_patterns": [
+    {"title": "Spending 70% on product framing", "fail": "20 minutes on personas, 10 left for the system. Interviewer never sees architecture.", "fix": "Cap product framing at 15% / 4 minutes. Pick one user, one pain, then move."},
+    {"title": "Every component is 'AI-powered'", "fail": "AI for prediction, AI for chat, AI for routing, AI for monitoring. Zero judgment.", "fix": "For each component: state LLM vs ML vs rules vs nothing. Explain the choice."},
+    {"title": "The vague 'AI magic' box", "fail": "A single box labeled 'AI' that somehow does everything.", "fix": "Break into named agents: Analyst (XGBoost), Voice (LLM), Executor (rules + recommender)."},
+    {"title": "Never mentioning failure modes", "fail": "Interviewer has to prompt you. Points already lost.", "fix": "Surface failure modes WHILE drawing — 'one trade-off I want to flag here…'"},
+    {"title": "Ignoring the model-selection question", "fail": "'I'd use AI.'", "fix": "'We don't always want to use an LLM when a traditional ML model will do. XGBoost for prediction. LLM for conversation.'"},
+    {"title": "The 15-minute monologue", "fail": "Head down, no pauses, no check-ins. Interviewer checks out.", "fix": "After each DASME phase: 'Does this make sense? Any questions before I move on?'"},
+    {"title": "Treating scale as hypothetical", "fail": "'We'd just add more servers.'", "fix": "Name the bottleneck first. Then concrete: vector DBs, on-premise, intelligent caching."}
+  ],
+  "signal_cascade": [
+    {"name": "Layer 1", "label": "Model metrics", "examples": [
+      {"kind": "Classification", "metrics": "Precision, Recall, F1, AUC, per-class confusion matrix"},
+      {"kind": "Ranking / search", "metrics": "NDCG@k, MAP@k, MRR, Recall@k"},
+      {"kind": "Retrieval / RAG", "metrics": "Retrieval recall@k, answer faithfulness, citation accuracy"},
+      {"kind": "Generation (LLM)", "metrics": "Hallucination rate, factuality, instruction-following, toxicity"},
+      {"kind": "Prediction (regression)", "metrics": "MAE, RMSE, calibration error"},
+      {"kind": "Cross-cutting", "metrics": "p50 / p95 / p99 latency, throughput, cost/inference, drift"}
+    ]},
+    {"name": "Layer 2", "label": "User-experience metrics", "examples": [
+      {"kind": "Outcomes", "metrics": "Task completion rate, time to completion, time to first value"},
+      {"kind": "Satisfaction", "metrics": "CSAT, thumbs-up per interaction, creator FP rate"},
+      {"kind": "Resolution", "metrics": "% issues resolved without human escalation"},
+      {"kind": "Retention", "metrics": "Retention of users who touched AI vs those who didn't"}
+    ]},
+    {"name": "Layer 3", "label": "Business metrics", "examples": [
+      {"kind": "Revenue", "metrics": "ACV, GMV, saved churn, conversion lift"},
+      {"kind": "Margin", "metrics": "Gross margin per interaction, cost vs human-powered baseline"},
+      {"kind": "Compliance", "metrics": "Regulatory / compliance incidents avoided"}
+    ]}
+  ],
+  "guardrail_metrics": [
+    {"name": "Safety / harm rate", "why": "Regulatory + reputational. Always primary."},
+    {"name": "Hallucination rate", "why": "Trust-destroying. Watch p99 not p50."},
+    {"name": "Latency p99", "why": "Tail experience matters more than average."},
+    {"name": "Cost per inference", "why": "Unit economics at scale."},
+    {"name": "Fairness across segments", "why": "Precision/recall parity by demographic."}
+  ],
+  "safety_checklist": [
+    {"question": "What harms are possible?", "body": "List ≥3 concrete harm vectors. Not abstract ('misuse') — specific ('a user tricks the agent into doxxing someone by roleplaying as customer support')."},
+    {"question": "What's the safety gate?", "body": "Which part of the architecture blocks harmful outputs? Rules engine, classifier, human review — or all three?"},
+    {"question": "What's the appeals path?", "body": "False positives destroy trust. How does a user appeal? Who reviews?"},
+    {"question": "What's the feedback loop?", "body": "How do new harm patterns get labeled, retrained, and deployed?"},
+    {"question": "How is it evaluated?", "body": "Offline harm eval set, red-team exercises, real-time telemetry on harm rate."},
+    {"question": "Who is accountable?", "body": "Which team owns safety incidents? What's the incident response?"}
+  ],
+  "vibe_tools": [
+    {"tool": "Lovable", "best_for": "Non-technical PMs building web apps fast. Connected Supabase/auth. Best UX for pure vibes."},
+    {"tool": "Bolt", "best_for": "Speed. Full-stack. Good for live demos when time is tight."},
+    {"tool": "v0", "best_for": "UI-first. Best visual polish. Perfect for pitching a feature concept."},
+    {"tool": "Replit Agent", "best_for": "Full-stack with real infra. Best when the interviewer probes how it runs in production."},
+    {"tool": "Cursor / Claude Code", "best_for": "Existing codebase to extend, or when you want full control."}
+  ]
+}

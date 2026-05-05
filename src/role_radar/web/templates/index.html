@@ -805,6 +805,12 @@
                                 <button class="research-link" onclick="event.stopPropagation(); openNotesModal('${job.id}')">
                                     ${job.notes ? '📝 Edit notes' : '+ Add notes'}
                                 </button>
+                                <button class="research-link" onclick="event.stopPropagation(); generatePrep('${job.id}', this, false)" title="Generate LLM-powered interview prep doc" style="background: #1F1D1A; color: white; border-color: #1F1D1A;">
+                                    📄 Generate prep
+                                </button>
+                                <button class="research-link" onclick="event.stopPropagation(); generatePrep('${job.id}', this, true)" title="Generate prep + run second-pass critic" style="background: #C2410C; color: white; border-color: #C2410C;">
+                                    📄+🔍 Prep + review
+                                </button>
                             </div>
 
                             <!-- Score breakdown -->
@@ -977,6 +983,44 @@
             const progress = total > 0 ? Math.round((reviewed / total) * 100) : 0;
             document.getElementById('progress-text').textContent = `${progress}%`;
             document.getElementById('progress-fill').style.width = `${progress}%`;
+        }
+
+        // Generate prep doc via API
+        async function generatePrep(jobId, btn, runReview = false) {
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = runReview ? '⏳ Generating + reviewing (60-120s)...' : '⏳ Generating (30-90s)...';
+            btn.style.opacity = '0.7';
+
+            try {
+                const response = await fetch('/api/prep/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ job_id: jobId, review: runReview })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showToast(data.error || 'Prep generation failed', 'error');
+                    btn.innerHTML = '❌ Failed — retry';
+                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; btn.style.opacity = '1'; }, 4000);
+                    return;
+                }
+
+                btn.innerHTML = '✓ Generated';
+                btn.style.opacity = '1';
+                let msg = `Prep ready — ${data.markdown_path.split(/[\\/]/).pop()}`;
+                if (data.review && !data.review.error) {
+                    msg += ` · Review: ${data.review.score}/10 · ${data.review.recommendation}`;
+                }
+                showToast(msg, 'success');
+                setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 5000);
+            } catch (e) {
+                showToast('Network error generating prep', 'error');
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
         }
 
         // Feedback functions

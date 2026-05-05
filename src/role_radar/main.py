@@ -1,5 +1,6 @@
 """Main CLI entry point for Role Radar."""
 
+import os
 import sys
 import uuid
 from datetime import datetime
@@ -421,6 +422,154 @@ def ui(
 
     settings = load_settings()
     run_server(host=host, port=port, outputs_dir=settings.output_dir)
+
+
+@app.command()
+def prep(
+    cv: Path = typer.Argument(..., help="Path to your CV (PDF, DOCX, or TXT)"),
+    job_id: Optional[str] = typer.Option(
+        None, "--job-id", help="Generate prep for a specific job ID from the latest report"
+    ),
+    rank: Optional[int] = typer.Option(
+        None, "--rank", "-r", help="Generate prep for the job at this rank in the latest report"
+    ),
+    top: Optional[int] = typer.Option(
+        None, "--top", "-t", help="Generate prep for the top N jobs from the latest report"
+    ),
+    report: Optional[Path] = typer.Option(
+        None, "--report", help="Use a specific report JSON instead of the latest"
+    ),
+    candidate_name: Optional[str] = typer.Option(
+        None, "--name", help="Candidate name for the doc header (defaults to env or 'Candidate')"
+    ),
+    no_docx: bool = typer.Option(
+        False, "--no-docx", help="Skip DOCX rendering, only emit Markdown"
+    ),
+    review: bool = typer.Option(
+        False, "--review", help="Run a second-pass critic on the generated doc and append findings"
+    ),
+    output_dir: Optional[Path] = typer.Option(
+        None, "--output-dir", "-o", help="Where to write prep docs (default: outputs/prep/)"
+    ),
+) -> None:
+    """Generate an LLM-powered interview prep doc for a job from the latest report.
+
+    Examples:
+        # Top match from the latest report
+        role-radar prep cv.pdf --rank 1
+
+        # Top 3 matches
+        role-radar prep cv.pdf --top 3
+
+        # Specific job
+        role-radar prep cv.pdf --job-id cursor_66e67c2e
+    """
+    from role_radar.cv_parser import parse_cv
+    from role_radar.interview_prep import (
+        PrepGenerationError,
+        generate_prep_for_job,
+        render_review_markdown,
+        review_prep_doc,
+    )
+    from role_radar.interview_prep.report_loader import (
+        find_jobs_in_report,
+        find_latest_report,
+        load_report,
+    )
+
+    settings = load_settings()
+    settings.ensure_dirs()
+    setup_logging(level=settings.log_level, format_type=settings.log_format)
+
+    # Need exactly one job selector
+    selectors = [s for s in (job_id, rank, top) if s is not None]
+    if len(selectors) != 1:
+        console.print("[red]Error:[/red] specify exactly one of --job-id, --rank, or --top")
+        raise typer.Exit(1)
+
+    if not cv.exists():
+        console.print(f"[red]Error:[/red] CV file not found: {cv}")
+        raise typer.Exit(1)
+
+    # Locate report
+    report_path = report or find_latest_report(settings.output_dir)
+    if report_path is None or not report_path.exists():
+        console.print(
+            f"[red]Error:[/red] no report found in {settings.output_dir}. Run `role-radar run` first."
+        )
+        raise typer.Exit(1)
+
+    console.print(f"[dim]Using report: {report_path.name}[/dim]")
+    report_data = load_report(report_path)
+    matches = find_jobs_in_report(
+        report_data, job_id=job_id, rank=rank, top_n=top
+    )
+    if not matches:
+        sel = job_id or (f"rank {rank}" if rank else f"top {top}")
+        console.print(f"[red]Error:[/red] no jobs in {report_path.name} match {sel}")
+        raise typer.Exit(1)
+
+    # Parse CV once
+    console.print("\n[bold]Parsing CV...[/bold]")
+    cv_signals = parse_cv(cv)
+    console.print(
+        f"  {len(cv_signals.skills)} skills · {len(cv_signals.domains)} domains · "
+        f"seniority: {cv_signals.inferred_seniority or 'unknown'}"
+    )
+
+    name = candidate_name or os.environ.get("ROLE_RADAR_CANDIDATE_NAME") or "Candidate"
+    out_dir = output_dir or (settings.output_dir / "prep")
+
+    successes = 0
+    failures = 0
+    for entry_rank, job in matches:
+        console.print(
+            f"\n[bold]Generating prep ({entry_rank}/{len(matches)}):[/bold] "
+            f"{job.company} — {job.title}"
+        )
+        try:
+            with console.status("Calling Claude (this takes ~30-90s)...", spinner="dots"):
+                prep_doc, md_path, docx_path = generate_prep_for_job(
+                    job=job,
+                    cv=cv_signals,
+                    candidate_name=name,
+                    output_dir=out_dir,
+                    cv_excerpt=cv_signals.raw_text,
+                    write_docx=not no_docx,
+                )
+            console.print(f"  [green]✓[/green] Markdown: {md_path}")
+            if docx_path:
+                console.print(f"  [green]✓[/green] DOCX:     {docx_path}")
+
+            if review:
+                with console.status("Running review pass...", spinner="dots"):
+                    try:
+                        report = review_prep_doc(md_path.read_text(encoding="utf-8"))
+                        review_md = render_review_markdown(report)
+                        with open(md_path, "a", encoding="utf-8") as f:
+                            f.write(review_md)
+                        console.print(
+                            f"  [green]✓[/green] Review:   {report.overall_score}/10 · "
+                            f"{len(report.findings)} findings · "
+                            f"recommendation: [bold]{report.ship_recommendation}[/bold]"
+                        )
+                    except Exception as e:
+                        console.print(f"  [yellow]![/yellow] Review failed: {e}")
+
+            successes += 1
+        except PrepGenerationError as e:
+            console.print(f"  [red]✗[/red] Failed: {e}")
+            failures += 1
+
+    console.print(
+        Panel(
+            f"[bold]Generated:[/bold] {successes}\n"
+            f"[bold]Failed:[/bold] {failures}\n"
+            f"[bold]Output:[/bold] {out_dir}",
+            title="Prep Complete",
+            border_style="green" if failures == 0 else "yellow",
+        )
+    )
 
 
 @app.command()

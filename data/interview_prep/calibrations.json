@@ -1,0 +1,65 @@
+{
+  "_source": "https://github.com/kalyvask/interview-prep/blob/main/src/content/calibrations.ts",
+  "_synced": "2026-05-05",
+  "_purpose": "These weak/strong calibration pairs are used as exemplars in the LLM prompt so generated answers match the 9/10 caliber bar.",
+  "calibrations": [
+    {
+      "id": "tell-me-about-yourself",
+      "question": "Tell me about yourself",
+      "context": "Calibration 2 candidate: 5 years PM at Shopify + Series B, applying to Anthropic Applied AI. Stated weaknesses: no direct AI/ML, e-commerce background.",
+      "weak": {
+        "score": "4/10",
+        "response": "So, um, I've been a PM for like 5 years now. I started at a small startup where I did a lot of different things, you know, kind of wore a lot of hats. Then I moved to a bigger company where I worked on growth stuff. I'm really passionate about user experience and I think I'm good at working with engineers.",
+        "flaws": ["~30s — too short", "6 fillers in 4 sentences", "Zero weakness flipping", "'Growth stuff' is meaningless", "No AI mention. No metrics."]
+      },
+      "strong": {
+        "score": "9/10",
+        "response": "I've been a PM for 5 years, most recently at Shopify where I led checkout optimization. Last year, 47 experiments, 14% conversion lift, $400M GMV. Biggest win was rebuilding address autocomplete — Google Maps API, predictive suggestions, cut mobile abandonment 8%.\n\nBefore Shopify I was at Vettery, built the candidate-matching algorithm from scratch. First real production ML exposure — worked with data science on ranking signals, learned accuracy vs. explainability trade-offs. Still runs today. 50K matches per week.\n\nI want to go deeper on AI, which is why Anthropic. Vettery showed me what ML can do when thoughtfully applied. Shopify taught me rigorous experimentation at scale. Claude needs both. Excited about making AI tools useful for everyday tasks — feels like the next version of conversion optimization.",
+        "strengths": ["2 minutes, zero hedging", "'No-AI' weakness flipped via Vettery", "Specific metrics throughout: $400M, 47, 14%, 8%, 50K", "Memorable detail: address autocomplete, ranking signals", "Clear Anthropic bridge in the closing line"]
+      }
+    },
+    {
+      "id": "biggest-failure",
+      "question": "What was your biggest failure?",
+      "weak": {
+        "score": "4/10",
+        "response": "My biggest failure was probably when I shipped a feature that didn't get adopted. We built this dashboard and I thought they would love it but they didn't really use it. I think the problem was we didn't do enough user research.",
+        "flaws": ["~45s — too short", "Minimizing language: 'probably,' 'I think,' 'didn't really'", "PM-101 lesson", "Zero specifics"]
+      },
+      "strong": {
+        "score": "9/10",
+        "response": "Launching our enterprise tier without proper infrastructure planning. 50-person startup, pushing upmarket. Three Fortune 500s ready to sign for SSO and custom SLAs.\n\nGot the deals. $1.2M ARR. But I hadn't coordinated with engineering on what 99.9% uptime actually required. Within two months, three incidents violated SLAs. $180K in credits. One customer churned.\n\nThe mistake was treating the launch like a sales problem when it was a cross-functional operations problem.\n\nWhat I took from it: big customers require a different operating model, not just a different price point. Next enterprise launch, I created a pre-sales technical review with engineering veto power on SLA commitments. Eight more deals since. Zero violations.\n\nThis is why I'm excited about Google — operating at scale needs the cross-functional rigor I learned the hard way.",
+        "strengths": ["Full 2-minute arc; owns the failure confidently", "'Small company' flipped to 'learned to operate at scale'", "Specifics: $1.2M, 99.9%, $180K, 8 deals", "Sophisticated lesson — not PM-101", "Google bridge in the closing line"]
+      }
+    },
+    {
+      "id": "ai-trade-off",
+      "question": "Tell me about an AI trade-off you made",
+      "weak": {
+        "score": "3/10",
+        "response": "We had to choose between model accuracy and latency. We chose latency because users were leaving. It worked out.",
+        "flaws": ["No model named", "No architecture", "No threshold or numbers", "'It worked out' is the antithesis of specificity"]
+      },
+      "strong": {
+        "score": "9/10",
+        "response": "Search team wanted to switch from BM25 to dense vector retrieval with sentence embeddings. 15% better offline relevance, but 4x infra cost and p99 latency from 80ms → 350ms.\n\nDug into the data. 70% of queries were simple keyword matches where BM25 was excellent. Dense only mattered for the 30% with semantic ambiguity.\n\nProposed a hybrid: BM25 for simple queries via a lightweight classifier, dense for complex. 80% of the quality gain at 1.5x cost, p99 under 150ms.\n\nML team pushed back on maintenance complexity — I acknowledged that and committed to monitoring for misrouted queries.",
+        "strengths": ["BM25, dense vector, sentence embeddings, p99, classifier — used naturally", "Third-option thinking, not binary", "Maturity on the maintenance trade-off", "Specific numbers throughout"]
+      }
+    },
+    {
+      "id": "system-design-churn",
+      "question": "Design a churn-reduction agent for a telecom company",
+      "context": "AI System Design round. The same prompt, two answers — one that fails the round, one that scores 9/10.",
+      "weak": {
+        "score": "3/10",
+        "response": "I'd start with user segmentation. There are new users, power users, at-risk users. Power users drive the most revenue so I'd focus there. I'd build an AI system that predicts churn and reaches out to users. The AI would use their data to decide what to do. For metrics, I'd track retention and engagement.",
+        "flaws": ["100% product framing, 0% system", "No diagram. 'An AI system' is the vague magic box.", "No model named. No failure modes. No orchestration. No memory.", "No scale discussion. Interviewer writes 'no system thinking' and moves on."]
+      },
+      "strong": {
+        "score": "9/10",
+        "response": "Quick scope: telecom, power users, multi-agent system, 6-month MVP. Sound good?\n\n[Draws diagram]\n\nInteraction layer: mobile app, SMS, outbound call.\nOrchestration layer: router that classifies intent and routes between agents, tracks conversation state.\nAgent layer: three agents. Data Analyst Agent runs churn prediction with XGBoost — cheaper, faster, more interpretable than an LLM for tabular features, and stakeholders can audit why a user was flagged. Customer Voice Agent uses an LLM because it needs natural language. Executor Agent uses a rules engine + ML recommender — offer logic has to be auditable and business-configurable.\nData layer: call transcripts → sentiment; app usage sessions; billing behavior; outage history. Vector DB for RAG, feature store for ML, policy store for the executor.\n\nMemory: episodic for past customer conversations, session for current state, semantic via RAG for product knowledge.\n\nDoes this structure make sense before I go into metrics?\n\nMetrics cascade: recall on churn prediction → escalation rate → retention lift. If recall drops from 90% to 85%, we miss 5% more at-risk users — at our base, ~2,500 accounts per quarter, $1.25M preventable churn.\n\nFailure modes: model down → circuit breaker to human agent. Latency >30s → escalate. Repetitive responses or frustration signals → hand off.\n\n10x scale: bottleneck is the LLM API at ~200ms per call. I'd cache the top 500 query patterns (~40% of volume), on-premise the voice agent for latency, and shard the vector DB by region.",
+        "strengths": ["All five DASME phases present with the right time allocation", "Four-layer diagram, three named agents with non-overlapping jobs", "XGBoost + LLM + rules — explicitly chosen and justified", "Three memory types named", "Metric cascade with dollar math", "Three failure modes; 10x-scale answer with named bottleneck and three concrete fixes"]
+      }
+    }
+  ]
+}

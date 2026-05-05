@@ -261,6 +261,60 @@ src/role_radar/
     └── logging.py       # Structured logging
 ```
 
+## Interview Prep Generator
+
+Once Role Radar finds a relevant role, generate a candidate-tailored interview prep doc with one click. The doc is modeled after the [Snowflake Traffic & Networking PM example](outputs/prep/) — a senior advisor's read of the role, technical topics to know cold, 5-7 likely questions with sample answers in your voice, an honest map of your background to the role (gaps included), a multi-day prep plan, and the strongest single move to make in the room.
+
+### Setup
+
+1. Install the optional `interview` extra:
+
+   ```bash
+   pip install -e ".[interview]"   # adds the anthropic SDK
+   ```
+
+2. Add your Anthropic API key to `.env`:
+
+   ```bash
+   ANTHROPIC_API_KEY=sk-ant-...
+   ROLE_RADAR_CV_PATH=/absolute/path/to/your/cv.pdf
+   ROLE_RADAR_CANDIDATE_NAME=Your Name
+   ```
+
+   Get a key at https://console.anthropic.com/settings/keys.
+
+### Usage
+
+**From the Web UI** — click the **📄 Generate prep** button on any job card. Output lands in `outputs/prep/` as both Markdown and DOCX. Generation takes 30-90s (Claude Opus 4.7 with adaptive thinking).
+
+**From the CLI** — run against the latest report:
+
+```bash
+# Top match
+role-radar prep cv.pdf --rank 1
+
+# Top 3 matches (one doc each)
+role-radar prep cv.pdf --top 3
+
+# Specific job by ID
+role-radar prep cv.pdf --job-id cursor_66e67c2e
+
+# Custom output dir, skip DOCX
+role-radar prep cv.pdf --rank 1 --output-dir ./my-prep --no-docx
+
+# Generate + run a second-pass critic (gstack-style review)
+role-radar prep cv.pdf --rank 1 --review
+```
+
+### How it works
+
+- **Prompt context**: a static system prompt (~5K tokens) bundles the candidate's interview frameworks (DASME, SIGNAL metric cascade, model selection, anti-patterns, safety checklist, the 3 Laws of delivery), 4 calibrated weak/strong answer exemplars, and the company-specific playbook if available. Marked `cache_control: ephemeral` so subsequent jobs at the same company hit the cache.
+- **Job + CV**: the per-job user message includes the full job posting, extracted CV signals, and a CV excerpt. Volatile, uncached.
+- **Structured output**: Pydantic schema with Markdown leaf strings → renders cleanly to both `.md` and `.docx`.
+- **Model**: Claude Opus 4.7 with adaptive thinking, `effort=high`, `max_tokens=16000`.
+
+The static context (`data/interview_prep/`) is mirrored from [kalyvask/interview-prep](https://github.com/kalyvask/interview-prep). To refresh it after the source repo updates, re-export the TypeScript content files to JSON and replace the snapshots in `data/interview_prep/`.
+
 ## License
 
 MIT

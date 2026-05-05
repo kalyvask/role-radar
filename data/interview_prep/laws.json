@@ -1,0 +1,35 @@
+{
+  "_source": "https://github.com/kalyvask/interview-prep/blob/main/src/content/laws.ts",
+  "_synced": "2026-05-05",
+  "three_laws": [
+    {"number": 1, "title": "How you say it matters more than what you say.", "body": "Delivery, energy, confidence, pacing, filler words. A mediocre answer delivered with conviction beats a perfect answer delivered with uncertainty."},
+    {"number": 2, "title": "Flip your weakness into a strength.", "body": "Every answer is an opportunity to address a perceived weakness proactively before it becomes a rejection reason."},
+    {"number": 3, "title": "Don't volunteer information that can hurt you.", "body": "Never badmouth employers. Never over-explain gaps. Never share compensation. Never volunteer failures you weren't asked about."}
+  ],
+  "five_shifts": [
+    {"title": "They test whether you've BUILT AI, not whether you UNDERSTAND it.", "body": "If the candidate can't name architectures, eval metrics, and business impact, flag it."},
+    {"title": "Vibe coding is a real round now.", "body": "Google, Figma, Perplexity, and v0 all require it. Cursor, Lovable, Bolt, Claude Code, Replit Agent."},
+    {"title": "AI product sense replaced traditional product sense.", "body": "Candidates must separate model-layer from app-layer, address safety proactively, and prioritize with math."},
+    {"title": "AI system design is the newest round.", "body": "18 months old. Catches the most candidates off guard. Zero public resources except the DASME framework."},
+    {"title": "Safety is tested everywhere.", "body": "Anthropic has a dedicated round. OpenAI embeds it. If a candidate doesn't mention safety in a case answer — flag it."}
+  ],
+  "seven_rounds": [
+    {"id": "behavioral", "label": "Behavioral", "tested": "Who you are, how you work", "rubric": "8 Dimensions + 3 Laws"},
+    {"id": "ai-product-sense", "label": "AI Product Sense", "tested": "User-first thinking with AI", "rubric": "6 Dimensions (Case)"},
+    {"id": "ai-product-design", "label": "AI Product Design", "tested": "End-to-end experience", "rubric": "6 Dimensions (Case)"},
+    {"id": "ai-system-design", "label": "AI System Design", "tested": "Architecting AI systems", "rubric": "DASME Framework"},
+    {"id": "ai-success-metrics", "label": "AI Success Metrics", "tested": "Model + UX + business metrics", "rubric": "SIGNAL cascade"},
+    {"id": "vibe-coding", "label": "Vibe Coding", "tested": "Building in the room", "rubric": "Prompt → test → iterate"},
+    {"id": "safety-ethics", "label": "Safety / Ethics", "tested": "Responsible AI judgment", "rubric": "Safety-by-design"}
+  ],
+  "eight_dimensions": [
+    {"name": "Timing & Conciseness", "detail": "90s–2min behavioral, 3–5min case sections. Going over 2 min is the #1 rejection reason. Estimate length at ~150 words/min."},
+    {"name": "Structure & Clarity", "detail": "Did they answer the question asked? Clear beginning/middle/end? For cases: framework before diving in?"},
+    {"name": "Specific Impact", "detail": "Concrete metrics and outcomes? For AI PM: MODEL metrics (precision, recall, F1, latency, cost/inference) alongside business metrics."},
+    {"name": "Confidence vs. Hedging", "detail": "Flag every 'I think,' 'kind of,' 'maybe,' 'sort of,' 'probably,' 'a little bit,' 'not sure if,' 'I feel like,' uptalk."},
+    {"name": "Filler Words", "detail": "Count every um, uh, like, so, actually, basically, you know, I mean, right, yeah."},
+    {"name": "Weakness Flipping", "detail": "Did the answer proactively address likely concerns? 10 = every weakness addressed elegantly, 1 = ignored or made worse."},
+    {"name": "Information Control", "detail": "Badmouthing? Over-explaining gaps? Sharing comp? Volunteering damaging info?"},
+    {"name": "Memorability", "detail": "Cocktail-party test: could the interviewer retell this story to a friend?"}
+  ]
+}
