@@ -5,7 +5,7 @@ End-to-end PM job hunt for AI companies: find relevant roles, score them against
 Two workflows in one tool:
 
 1. **Discovery** — pulls live job postings from ~80 curated AI companies (frontier labs, AI infra, AI apps, dev tools) and VC-backed startups across Greenhouse, Lever, Ashby, SmartRecruiters, and a generic HTML fallback. Scores each role 0–100 against your CV across title/seniority, skills, domains, location, and company preference. Reads from a local SQLite cache, so you can replay scoring without re-fetching.
-2. **Interview prep** — for any job in the latest report, generate a Snowflake-style prep doc using Claude Opus 4.7. Streams live progress to the UI button (parsing → calling Claude → reviewing → writing files), runs a second-pass critic that scores the doc 1–10 with severity-tagged findings, and auto-opens the result. Outputs both Markdown and DOCX to `outputs/prep/`.
+2. **Interview prep** — for any job in the latest report, generate a comprehensive prep report covering the company, the role, and the likely interview questions for it (pulled from public signals about how that company interviews), then auto-adjust which of your CV stories to tell so each one maps to what the role actually wants. Built on Claude Opus 4.7 with adaptive thinking, structured Pydantic output, and prompt-cached static context (frameworks, calibrations, per-company playbooks). Streams live progress to the UI button (parsing → calling Claude → reviewing → writing files), runs a second-pass critic that scores the doc 1–10 with severity-tagged findings, and auto-opens the result as a styled HTML view + downloadable Word file.
 
 ## Features
 
@@ -269,7 +269,7 @@ src/role_radar/
 
 ## Interview Prep Generator
 
-Once Role Radar finds a relevant role, generate a candidate-tailored interview prep doc with one click. The doc is modeled after the [Snowflake Traffic & Networking PM example](outputs/prep/) — a senior advisor's read of the role, technical topics to know cold, 5-7 likely questions with sample answers in your voice, an honest map of your background to the role (gaps included), a multi-day prep plan, and the strongest single move to make in the room.
+Once Role Radar finds a relevant role, generate a comprehensive interview prep report with one click. The report covers: a senior advisor's read of the company and role, the technical topics you need to know cold (sourced from the company's public engineering surface), the 5-7 likely interview questions for this role (with sample answers that re-map your CV stories to what this role actually wants), an honest read of how your background maps to the role and where the gaps are, a multi-day prep plan, and the strongest single move to make in the room. Markdown + DOCX output, plus a styled in-browser view.
 
 ### Setup
 
