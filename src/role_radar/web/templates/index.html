@@ -1019,8 +1019,8 @@
                     const mdName = data.markdown_path.split(/[\\/]/).pop();
                     const docxName = data.docx_path ? data.docx_path.split(/[\\/]/).pop() : null;
 
-                    // Replace the button with two links: open MD + download DOCX
-                    btn.innerHTML = `<a href="/prep-files/${encodeURIComponent(mdName)}" target="_blank" style="color:white;text-decoration:underline">📖 Open</a>` +
+                    // Replace the button with two links: styled HTML view + DOCX download
+                    btn.innerHTML = `<a href="/prep-view/${encodeURIComponent(mdName)}" target="_blank" style="color:white;text-decoration:underline">📖 Open</a>` +
                         (docxName ? ` · <a href="/prep-files/${encodeURIComponent(docxName)}" download style="color:white;text-decoration:underline">⬇ DOCX</a>` : '');
                     btn.disabled = false;
                     btn.style.opacity = '1';
@@ -1032,8 +1032,8 @@
                     }
                     showToast(msg, 'success');
 
-                    // Auto-open the doc in a new tab so user can read it immediately
-                    window.open(`/prep-files/${encodeURIComponent(mdName)}`, '_blank');
+                    // Auto-open the styled HTML view in a new tab
+                    window.open(`/prep-view/${encodeURIComponent(mdName)}`, '_blank');
                     return;
                 }
 

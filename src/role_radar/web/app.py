@@ -822,6 +822,153 @@ def serve_prep_file(filename: str):
     return send_from_directory(prep_dir, filename, as_attachment=False)
 
 
+@app.route("/prep-view/<path:filename>")
+def view_prep_doc(filename: str):
+    """Render a prep doc Markdown file as styled HTML for in-browser reading.
+
+    Mirrors the visual feel of the Snowflake reference prep doc — wide-margin
+    serif typography, numbered sections, hairline rules, generous spacing.
+    """
+    import markdown as _markdown
+
+    outputs_dir = Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR))
+    md_path = outputs_dir / "prep" / filename
+    if not md_path.exists() or not md_path.is_file() or md_path.suffix != ".md":
+        return "prep markdown not found", 404
+
+    md_text = md_path.read_text(encoding="utf-8")
+    html_body = _markdown.markdown(
+        md_text,
+        extensions=["extra", "sane_lists", "smarty", "toc"],
+        output_format="html5",
+    )
+
+    # Pull the title (first H1) for the page <title>
+    page_title = filename
+    for line in md_text.splitlines():
+        if line.startswith("# "):
+            page_title = line[2:].strip()
+            break
+
+    docx_name = md_path.with_suffix(".docx").name
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{page_title}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {{
+    --bg:        #F7F6F3;
+    --surface:   #FFFFFF;
+    --rule:      #EAE7E0;
+    --rule-soft: #F0EDE6;
+    --ink:       #1F1D1A;
+    --ink-muted: #6E6A63;
+    --ink-soft:  #9A958C;
+    --accent:    #C2410C;
+    --accent-bg: #FBEBE0;
+    --good:      #15803D;
+  }}
+  * {{ box-sizing: border-box; }}
+  html {{ background: var(--bg); }}
+  body {{
+    margin: 0;
+    padding: 64px 24px 96px;
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-size: 16.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }}
+  .wrap {{ max-width: 760px; margin: 0 auto; }}
+  .toolbar {{
+    position: fixed; top: 16px; right: 24px;
+    display: flex; gap: 12px; align-items: center;
+    background: var(--surface); border: 1px solid var(--rule);
+    padding: 8px 14px; border-radius: 999px;
+    font-size: 13px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }}
+  .toolbar a {{ color: var(--accent); text-decoration: none; font-weight: 500; }}
+  .toolbar a:hover {{ color: var(--ink); }}
+  .toolbar .sep {{ color: var(--rule); }}
+  h1, h2, h3, h4 {{
+    font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }}
+  h1 {{ font-size: 42px; line-height: 1.1; margin: 0 0 12px; }}
+  h2 {{
+    font-size: 28px; line-height: 1.2;
+    margin: 56px 0 16px;
+    padding-top: 28px;
+    border-top: 1px solid var(--rule);
+  }}
+  h3 {{ font-size: 21px; margin: 32px 0 10px; }}
+  h4 {{ font-size: 17px; margin: 24px 0 6px; }}
+  p {{ margin: 0 0 16px; }}
+  p strong, li strong {{ color: var(--ink); font-weight: 600; }}
+  em {{ color: var(--ink-muted); }}
+  ul, ol {{ padding-left: 22px; margin: 0 0 16px; }}
+  li {{ margin: 6px 0; }}
+  hr {{ border: none; border-top: 1px solid var(--rule); margin: 40px 0; }}
+  blockquote {{
+    margin: 16px 0;
+    padding: 12px 18px;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-bg);
+    color: var(--ink);
+    font-style: italic;
+  }}
+  blockquote p {{ margin: 0; }}
+  code {{
+    font-family: 'JetBrains Mono', Consolas, 'Liberation Mono', monospace;
+    font-size: 0.92em;
+    background: var(--rule-soft);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }}
+  pre {{ background: #1F1D1A; color: #F7F6F3; padding: 16px; border-radius: 4px; overflow-x: auto; }}
+  pre code {{ background: none; padding: 0; color: inherit; }}
+  /* Center the header block (Title + meta) */
+  .wrap > h1:first-child {{ text-align: center; }}
+  .wrap > h1:first-child + p {{ text-align: center; color: var(--ink-muted); margin-bottom: 8px; }}
+  .wrap > h1:first-child + p + p {{ text-align: center; color: var(--ink-muted); }}
+  .wrap > h1:first-child + p + p + p em {{ display: block; text-align: center; margin-top: 4px; }}
+  .wrap > hr:first-of-type {{ margin-top: 32px; }}
+  @media (max-width: 640px) {{
+    body {{ padding: 32px 16px 64px; }}
+    h1 {{ font-size: 32px; }}
+    h2 {{ font-size: 24px; }}
+    .toolbar {{ position: static; margin-bottom: 24px; }}
+  }}
+  @media print {{
+    .toolbar {{ display: none; }}
+    body {{ background: white; padding: 0; }}
+  }}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <a href="/prep-files/{docx_name}" download>⬇ Download DOCX</a>
+  <span class="sep">·</span>
+  <a href="/prep-files/{filename}" target="_blank">View source</a>
+  <span class="sep">·</span>
+  <a href="/" target="_self">← Back to jobs</a>
+</div>
+<div class="wrap">
+{html_body}
+</div>
+</body>
+</html>"""
+
+
 @app.route("/api/prep/stream")
 def api_prep_stream():
     """SSE endpoint that streams phase + elapsed-time progress events as a prep
