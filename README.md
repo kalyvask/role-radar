@@ -1,16 +1,22 @@
 # Role Radar 🎯
 
-A production-quality CLI tool that helps Product Managers find relevant roles at top AI companies and VC-backed startups in the SF Bay Area.
+End-to-end PM job hunt for AI companies: find relevant roles, score them against your CV, then generate a candidate-tailored LLM interview prep doc for any one with a single click.
+
+Two workflows in one tool:
+
+1. **Discovery** — pulls live job postings from ~80 curated AI companies (frontier labs, AI infra, AI apps, dev tools) and VC-backed startups across Greenhouse, Lever, Ashby, SmartRecruiters, and a generic HTML fallback. Scores each role 0–100 against your CV across title/seniority, skills, domains, location, and company preference. Reads from a local SQLite cache, so you can replay scoring without re-fetching.
+2. **Interview prep** — for any job in the latest report, generate a Snowflake-style prep doc using Claude Opus 4.7. Streams live progress to the UI button (parsing → calling Claude → reviewing → writing files), runs a second-pass critic that scores the doc 1–10 with severity-tagged findings, and auto-opens the result. Outputs both Markdown and DOCX to `outputs/prep/`.
 
 ## Features
 
-- **Curated Company Lists**: Transparent scoring methodology for Top 20 AI companies and Top VCs
-- **Multi-ATS Support**: Connectors for Greenhouse, Lever, SmartRecruiters, and generic HTML parsing
-- **Smart Matching**: CV-based scoring across title/seniority, skills, domains, and location
-- **Deduplication**: Intelligent removal of duplicate job postings across sources
-- **Email Reports**: Beautiful HTML emails with match rationale and score breakdowns
-- **Local Caching**: SQLite database to avoid redundant API calls
-- **Observability**: Structured JSON logging and run summaries
+- **Curated company lists** — transparent scoring methodology for Top 20 AI companies and Top VCs
+- **Multi-ATS support** — connectors for Greenhouse, Lever, Ashby, SmartRecruiters, generic HTML
+- **Smart matching** — CV-based scoring across title/seniority, skills, domains, location, with a learned-preferences layer driven by like/dislike feedback
+- **Web review UI** — Flask UI to browse matches, like/dislike to train the scorer, take notes, mark applied
+- **Interview prep generator** — Claude Opus 4.7 with adaptive thinking, prompt-cached static context (frameworks, calibrations, per-company playbooks), structured Pydantic output, second-pass review critic, live SSE progress streaming, Markdown + DOCX output
+- **Email reports** — HTML emails with match rationale and score breakdowns
+- **Local caching** — SQLite for jobs/companies, prompt cache for the LLM
+- **Observability** — structured JSON logging and run summaries
 
 ## Installation
 
@@ -285,7 +291,7 @@ Once Role Radar finds a relevant role, generate a candidate-tailored interview p
 
 ### Usage
 
-**From the Web UI** — click the **📄 Generate prep** button on any job card. Output lands in `outputs/prep/` as both Markdown and DOCX. Generation takes 30-90s (Claude Opus 4.7 with adaptive thinking).
+**From the Web UI** — click the **📄 Generate prep** button on any job card. The button streams live progress via SSE — `📄 Parsing CV → 🤖 Calling Claude (~60s) · Ns → 🔍 Reviewing doc (~30s) · Ns → 💾 Writing files` — and once done transforms into clickable **📖 Open · ⬇ DOCX** links to the just-generated files. The Markdown also auto-opens in a new tab. Total time: 60-120s.
 
 **From the CLI** — run against the latest report:
 
