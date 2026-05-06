@@ -178,11 +178,15 @@ class Settings(BaseSettings):
 
 
 def load_settings(env_file: Optional[Path] = None) -> Settings:
-    """Load settings from environment and .env file."""
+    """Load settings from environment and .env file.
+
+    Uses ``override=True`` so values in .env take precedence over empty/stale
+    shell vars (common when ANTHROPIC_API_KEY is set to "" in a parent shell).
+    """
     if env_file:
-        load_dotenv(env_file)
+        load_dotenv(env_file, override=True)
     else:
-        load_dotenv()
+        load_dotenv(override=True)
 
     return Settings()
 

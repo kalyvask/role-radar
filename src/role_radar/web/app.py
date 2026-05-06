@@ -19,7 +19,7 @@ from dateutil import parser as date_parser
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-load_dotenv()
+load_dotenv(override=True)  # override=True so .env beats stale empty shell vars
 
 # Initialize Flask app
 app = Flask(__name__,

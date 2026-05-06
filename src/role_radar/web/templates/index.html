@@ -805,11 +805,8 @@
                                 <button class="research-link" onclick="event.stopPropagation(); openNotesModal('${job.id}')">
                                     ${job.notes ? '📝 Edit notes' : '+ Add notes'}
                                 </button>
-                                <button class="research-link" onclick="event.stopPropagation(); generatePrep('${job.id}', this, false)" title="Generate LLM-powered interview prep doc" style="background: #1F1D1A; color: white; border-color: #1F1D1A;">
+                                <button class="research-link" onclick="event.stopPropagation(); generatePrep('${job.id}', this, true)" title="Generate LLM-powered interview prep doc + run second-pass critic" style="background: #1F1D1A; color: white; border-color: #1F1D1A;">
                                     📄 Generate prep
-                                </button>
-                                <button class="research-link" onclick="event.stopPropagation(); generatePrep('${job.id}', this, true)" title="Generate prep + run second-pass critic" style="background: #C2410C; color: white; border-color: #C2410C;">
-                                    📄+🔍 Prep + review
                                 </button>
                             </div>
 
