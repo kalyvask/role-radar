@@ -7,6 +7,47 @@ Two workflows in one tool:
 1. **Discovery** — pulls live job postings from ~80 curated AI companies (frontier labs, AI infra, AI apps, dev tools) and VC-backed startups across Greenhouse, Lever, Ashby, SmartRecruiters, and a generic HTML fallback. Scores each role 0–100 against your CV across title/seniority, skills, domains, location, and company preference. Reads from a local SQLite cache, so you can replay scoring without re-fetching.
 2. **Interview prep** — for any job in the latest report, generate a comprehensive prep report covering the company, the role, and the likely interview questions for it (pulled from public signals about how that company interviews), then auto-adjust which of your CV stories to tell so each one maps to what the role actually wants. Built on Claude Opus 4.7 with adaptive thinking, structured Pydantic output, and prompt-cached static context (frameworks, calibrations, per-company playbooks). Streams live progress to the UI button (parsing → calling Claude → reviewing → writing files), runs a second-pass critic that scores the doc 1–10 with severity-tagged findings, and auto-opens the result as a styled HTML view + downloadable Word file.
 
+This repo ships clean — no CV, no name, no personal data. See [Personalize this for your own use](#personalize-this-for-your-own-use) for the 5-minute setup.
+
+## Personalize this for your own use
+
+Forking or cloning? Do these steps in order before running anything:
+
+1. **Drop your CV into the repo root.** Any filename matching `*_CV.pdf`, `*_Resume.pdf`, or `*_resume.pdf` is auto-gitignored (see `.gitignore` lines 52–54). Example: `Alex_Kalyvas_CV.pdf`. For DOCX/TXT, add the filename to `.gitignore` manually.
+
+2. **Create your `.env`** from the template:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Then add these three lines (the email credentials are also required if you want `--send` to work):
+
+   ```bash
+   ROLE_RADAR_CV_PATH=/absolute/path/to/Your_Name_CV.pdf
+   ROLE_RADAR_CANDIDATE_NAME=Your Name
+   ANTHROPIC_API_KEY=sk-ant-...   # only needed for the interview prep generator
+   ```
+
+   Get an Anthropic key at <https://console.anthropic.com/settings/keys>.
+
+3. **Edit `preferences.yaml`** for your search — set `location`, `include_remote`, `seniority`, `allowed_titles`, and `excluded_keywords`. The shipped defaults target SF Bay Area PM roles; change them to match yours.
+
+4. **(Optional) Edit `data/portfolios.csv`** to add custom companies you want tracked beyond the curated AI Top 20 / VC portfolios. Schema: `company_name,homepage_url,careers_url,vc_backers,notes`.
+
+5. **(Windows users) Wire up the local run scripts.** Copy the templates and edit the paths inside:
+
+   ```bash
+   cp run-scrape.bat.example run-scrape.bat   # edit cd path + CV_PATH
+   cp start-ui.bat.example   start-ui.bat     # edit cd path
+   ```
+
+   Both `.bat` files are gitignored (see `.gitignore` lines 58–59) so your local paths never get committed. Point Windows Task Scheduler at `run-scrape.bat` for weekly automated scrapes.
+
+6. **What stays local** (none of this is ever committed): your CV PDF, your `.env`, generated prep docs in `outputs/prep/`, learned like/dislike feedback in `~/.role_radar/feedback.db` (lives outside the repo, in your home dir), and your `*.bat` scripts.
+
+You're done. Run `role-radar run "$ROLE_RADAR_CV_PATH"` for a dry run, or jump to [Installation](#installation) below.
+
 ## Features
 
 - **Curated company lists** — transparent scoring methodology for Top 20 AI companies and Top VCs
@@ -320,41 +361,6 @@ role-radar prep cv.pdf --rank 1 --review
 - **Model**: Claude Opus 4.7 with adaptive thinking, `effort=high`, `max_tokens=16000`.
 
 The static context (`data/interview_prep/`) is mirrored from [kalyvask/interview-prep](https://github.com/kalyvask/interview-prep). To refresh it after the source repo updates, re-export the TypeScript content files to JSON and replace the snapshots in `data/interview_prep/`.
-
-## Configure for your own CV and stories
-
-This repo is intentionally clean of any single user's personal data — no CV, no
-stories, no name. To run it for yourself:
-
-1. **Drop your CV into the repo root** (PDF, DOCX, or TXT). The default
-   `.gitignore` already excludes `*_Resume.pdf`, `*_resume.pdf`, and
-   `*_CV.pdf` so it won't be committed accidentally. Use one of those naming
-   conventions or add your filename to `.gitignore` manually.
-
-2. **Set the path in `.env`**:
-
-   ```bash
-   ROLE_RADAR_CV_PATH=/absolute/path/to/your_cv.pdf
-   ROLE_RADAR_CANDIDATE_NAME=Your Name
-   ```
-
-3. **Where your stories live**: the prep generator extracts your stories
-   directly from the CV text — there's no separate "stories file" to maintain.
-   Make sure the bullets on your CV include specific numbers, technologies, and
-   outcomes; the LLM uses those verbatim when constructing sample answers.
-
-4. **Local run scripts**: `run-scrape.bat.example` and `start-ui.bat.example`
-   are templates with placeholder paths. Copy them to `run-scrape.bat` and
-   `start-ui.bat` (both gitignored), then edit the paths to point at your
-   clone. These let you wire Role Radar into Windows Task Scheduler.
-
-5. **Learned preferences are local**: like/dislike feedback from the Web UI is
-   stored in `~/.role_radar/feedback.db` (a per-user SQLite file outside the
-   repo), never in the repo itself.
-
-6. **Generated prep docs are local**: the prep generator writes to
-   `outputs/prep/`, which is fully gitignored. Your prep docs (which contain
-   tailored sample answers using your CV stories) stay on your machine.
 
 ## License
 
