@@ -72,7 +72,7 @@ Each source feeds into the same `discovered_companies.csv` triage flow as #2.
 
 ### 7. Match feedback is per-job, not per-company-type
 
-[`web/app.py:141`](../src/role_radar/web/app.py) (`update_learned_preferences`) learns from individual job feedback. But Alex's CV is heavily AI-platform/AI-infra, and the feedback signal could push the *category-level* boost up — "you've liked 8/10 AI Infra companies, deprioritize AI Apps" — instead of needing to learn each company individually.
+[`web/app.py:141`](../src/role_radar/web/app.py) (`update_learned_preferences`) learns from individual job feedback. But if a user's CV concentrates in a particular AI category (infra, apps, dev tools), the feedback signal could push the *category-level* boost up — "you've liked 8/10 AI Infra companies, deprioritize AI Apps" — instead of needing to learn each company individually.
 
 **Fix (3h):** Add a `category` learning signal alongside the existing company / title-keyword ones. When feedback comes in, also update `learned_preferences[category:ai_infra]` based on the company's `AICategory`. Apply at scoring time as a small +/-3 adjustment on `_score_company_preference`.
 

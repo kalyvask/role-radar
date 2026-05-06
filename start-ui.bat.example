@@ -1,0 +1,9 @@
+@echo off
+REM Role Radar - Start Flask UI
+REM Copy this file to `start-ui.bat`, edit the path below, then either run it
+REM manually or schedule it via Windows Task Scheduler (e.g. on logon).
+
+REM Path to YOUR clone of role-radar
+cd /d "C:\path\to\role-radar"
+
+role-radar ui --port 5000

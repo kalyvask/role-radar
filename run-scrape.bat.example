@@ -1,0 +1,14 @@
+@echo off
+REM Role Radar - Weekly Scheduled Job Scrape + Email
+REM Copy this file to `run-scrape.bat`, edit the two paths below, then point
+REM Windows Task Scheduler at it (e.g. weekly Sunday 9:00 AM).
+
+REM 1. Path to YOUR clone of role-radar
+cd /d "C:\path\to\role-radar"
+
+REM 2. Filename of YOUR CV (relative to the path above, or an absolute path)
+set CV_PATH=your_cv.pdf
+
+echo [%date% %time%] Starting Role Radar weekly scrape... >> scrape.log
+role-radar run "%CV_PATH%" --send >> scrape.log 2>&1
+echo [%date% %time%] Weekly scrape complete. >> scrape.log

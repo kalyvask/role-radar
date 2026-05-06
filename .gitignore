@@ -49,11 +49,14 @@ outputs/
 *.log
 
 # Personal files (don't commit your CV or contacts)
-Alex_Kalyvas_Resume.pdf
 *_Resume.pdf
 *_resume.pdf
 *_CV.pdf
 data/networking_contacts.json
+
+# Local-only run scripts — copy from `*.bat.example` and edit paths to your machine
+run-scrape.bat
+start-ui.bat
 
 # Claude / agent state
 .claude/

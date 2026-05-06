@@ -321,6 +321,41 @@ role-radar prep cv.pdf --rank 1 --review
 
 The static context (`data/interview_prep/`) is mirrored from [kalyvask/interview-prep](https://github.com/kalyvask/interview-prep). To refresh it after the source repo updates, re-export the TypeScript content files to JSON and replace the snapshots in `data/interview_prep/`.
 
+## Configure for your own CV and stories
+
+This repo is intentionally clean of any single user's personal data — no CV, no
+stories, no name. To run it for yourself:
+
+1. **Drop your CV into the repo root** (PDF, DOCX, or TXT). The default
+   `.gitignore` already excludes `*_Resume.pdf`, `*_resume.pdf`, and
+   `*_CV.pdf` so it won't be committed accidentally. Use one of those naming
+   conventions or add your filename to `.gitignore` manually.
+
+2. **Set the path in `.env`**:
+
+   ```bash
+   ROLE_RADAR_CV_PATH=/absolute/path/to/your_cv.pdf
+   ROLE_RADAR_CANDIDATE_NAME=Your Name
+   ```
+
+3. **Where your stories live**: the prep generator extracts your stories
+   directly from the CV text — there's no separate "stories file" to maintain.
+   Make sure the bullets on your CV include specific numbers, technologies, and
+   outcomes; the LLM uses those verbatim when constructing sample answers.
+
+4. **Local run scripts**: `run-scrape.bat.example` and `start-ui.bat.example`
+   are templates with placeholder paths. Copy them to `run-scrape.bat` and
+   `start-ui.bat` (both gitignored), then edit the paths to point at your
+   clone. These let you wire Role Radar into Windows Task Scheduler.
+
+5. **Learned preferences are local**: like/dislike feedback from the Web UI is
+   stored in `~/.role_radar/feedback.db` (a per-user SQLite file outside the
+   repo), never in the repo itself.
+
+6. **Generated prep docs are local**: the prep generator writes to
+   `outputs/prep/`, which is fully gitignored. Your prep docs (which contain
+   tailored sample answers using your CV stories) stay on your machine.
+
 ## License
 
 MIT
