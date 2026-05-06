@@ -982,42 +982,87 @@
             document.getElementById('progress-fill').style.width = `${progress}%`;
         }
 
-        // Generate prep doc via API
-        async function generatePrep(jobId, btn, runReview = false) {
+        // Generate prep doc via SSE — streams phase + elapsed-time progress to the button
+        function generatePrep(jobId, btn, runReview = true) {
             const originalText = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = runReview ? '⏳ Generating + reviewing (60-120s)...' : '⏳ Generating (30-90s)...';
             btn.style.opacity = '0.7';
+            btn.innerHTML = '⏳ Starting...';
 
-            try {
-                const response = await fetch('/api/prep/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ job_id: jobId, review: runReview })
-                });
-                const data = await response.json();
+            const phaseLabels = {
+                parsing_cv:    '📄 Parsing CV...',
+                generating:    '🤖 Calling Claude (~60s)',
+                reviewing:     '🔍 Reviewing doc (~30s)',
+                writing_files: '💾 Writing files...',
+            };
+            let currentPhase = '';
+            let phaseStartElapsed = 0;
 
-                if (!response.ok) {
-                    showToast(data.error || 'Prep generation failed', 'error');
-                    btn.innerHTML = '❌ Failed — retry';
-                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; btn.style.opacity = '1'; }, 4000);
+            const url = `/api/prep/stream?job_id=${encodeURIComponent(jobId)}&review=${runReview}`;
+            const es = new EventSource(url);
+
+            es.onmessage = (e) => {
+                let data;
+                try { data = JSON.parse(e.data); } catch { return; }
+
+                if (data.phase === 'tick') {
+                    // Rebase the in-phase timer on the first tick after a phase change
+                    if (phaseStartElapsed === -1) phaseStartElapsed = data.elapsed;
+                    const inPhase = Math.max(0, data.elapsed - phaseStartElapsed);
+                    const label = phaseLabels[currentPhase] || '⏳ Working...';
+                    btn.innerHTML = `${label} · ${inPhase}s`;
                     return;
                 }
 
-                btn.innerHTML = '✓ Generated';
-                btn.style.opacity = '1';
-                let msg = `Prep ready — ${data.markdown_path.split(/[\\/]/).pop()}`;
-                if (data.review && !data.review.error) {
-                    msg += ` · Review: ${data.review.score}/10 · ${data.review.recommendation}`;
+                if (data.phase === 'done') {
+                    es.close();
+                    const mdName = data.markdown_path.split(/[\\/]/).pop();
+                    const docxName = data.docx_path ? data.docx_path.split(/[\\/]/).pop() : null;
+
+                    // Replace the button with two links: open MD + download DOCX
+                    btn.innerHTML = `<a href="/prep-files/${encodeURIComponent(mdName)}" target="_blank" style="color:white;text-decoration:underline">📖 Open</a>` +
+                        (docxName ? ` · <a href="/prep-files/${encodeURIComponent(docxName)}" download style="color:white;text-decoration:underline">⬇ DOCX</a>` : '');
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.onclick = (ev) => ev.stopPropagation(); // links handle their own clicks
+
+                    let msg = `Prep ready: ${mdName}`;
+                    if (data.review && !data.review.error) {
+                        msg += ` · Review ${data.review.score}/10 · ${data.review.recommendation}`;
+                    }
+                    showToast(msg, 'success');
+
+                    // Auto-open the doc in a new tab so user can read it immediately
+                    window.open(`/prep-files/${encodeURIComponent(mdName)}`, '_blank');
+                    return;
                 }
-                showToast(msg, 'success');
-                setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 5000);
-            } catch (e) {
-                showToast('Network error generating prep', 'error');
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-                btn.style.opacity = '1';
-            }
+
+                if (data.phase === 'error') {
+                    es.close();
+                    btn.innerHTML = '❌ Failed';
+                    btn.style.opacity = '1';
+                    showToast(data.error || 'Prep generation failed', 'error');
+                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 5000);
+                    return;
+                }
+
+                // Phase change — reset the in-phase timer (next tick will rebase)
+                if (phaseLabels[data.phase]) {
+                    currentPhase = data.phase;
+                    btn.innerHTML = phaseLabels[data.phase];
+                    phaseStartElapsed = -1;
+                }
+            };
+
+            es.onerror = () => {
+                es.close();
+                if (btn.disabled) {
+                    btn.innerHTML = '❌ Stream error';
+                    btn.style.opacity = '1';
+                    showToast('Lost connection during generation. Check the server log.', 'error');
+                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 5000);
+                }
+            };
         }
 
         // Feedback functions

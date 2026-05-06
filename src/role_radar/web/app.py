@@ -808,6 +808,160 @@ def generate_email_plain(jobs: list) -> str:
     return "\n".join(lines)
 
 
+@app.route("/prep-files/<path:filename>")
+def serve_prep_file(filename: str):
+    """Serve a generated prep doc (Markdown or DOCX) from outputs/prep/.
+
+    Used so the UI can offer one-click open/download of just-generated docs.
+    Path-traversal-safe via Flask's send_from_directory.
+    """
+    outputs_dir = Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR))
+    prep_dir = outputs_dir / "prep"
+    if not prep_dir.exists():
+        return "prep directory not found", 404
+    return send_from_directory(prep_dir, filename, as_attachment=False)
+
+
+@app.route("/api/prep/stream")
+def api_prep_stream():
+    """SSE endpoint that streams phase + elapsed-time progress events as a prep
+    doc generates.
+
+    Query params:
+        job_id: required.
+        review: 'true' / 'false', defaults to 'true'.
+
+    Events emitted (each as JSON in `data: ...`):
+        {"phase": "parsing_cv"}
+        {"phase": "generating"}                  # Claude generation call started
+        {"phase": "tick", "elapsed": 12}         # heartbeat every 2s
+        {"phase": "reviewing"}                   # Claude review call started
+        {"phase": "writing_files"}
+        {"phase": "done", "markdown_path": ..., "docx_path": ..., "review": {...}}
+        {"phase": "error", "error": "..."}
+    """
+    import json as _json
+    import queue as _queue
+    import threading as _threading
+    import time as _time
+
+    from flask import Response, stream_with_context
+
+    job_id = request.args.get("job_id", "")
+    do_review = request.args.get("review", "true").lower() != "false"
+
+    if not job_id:
+        return jsonify({"error": "job_id is required"}), 400
+
+    cv_path_str = os.getenv("ROLE_RADAR_CV_PATH")
+    if not cv_path_str:
+        return jsonify({"error": "ROLE_RADAR_CV_PATH not set in .env"}), 400
+    cv_path = Path(cv_path_str)
+    if not cv_path.exists():
+        return jsonify({"error": f"CV not found at {cv_path}"}), 400
+
+    # Resolve job up-front so we can fail fast with a 4xx (not in the SSE stream)
+    from role_radar.interview_prep.report_loader import (
+        find_jobs_in_report,
+        find_latest_report,
+        load_report,
+    )
+
+    outputs_dir = Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR))
+    report_path = find_latest_report(outputs_dir)
+    if report_path is None:
+        return jsonify({"error": "No report found in outputs directory."}), 404
+    report_data = load_report(report_path)
+    matches = find_jobs_in_report(report_data, job_id=job_id)
+    if not matches:
+        return jsonify({"error": f"Job {job_id} not found in {report_path.name}"}), 404
+    _, job = matches[0]
+
+    @stream_with_context
+    def event_stream():
+        from role_radar.cv_parser import parse_cv
+        from role_radar.interview_prep import (
+            generate_prep_for_job,
+            render_review_markdown,
+            review_prep_doc,
+        )
+
+        events: _queue.Queue = _queue.Queue()
+
+        def emit(payload: dict) -> None:
+            events.put(payload)
+
+        def worker() -> None:
+            try:
+                emit({"phase": "parsing_cv"})
+                cv_signals = parse_cv(cv_path)
+
+                emit({"phase": "generating"})
+                candidate_name = os.getenv("ROLE_RADAR_CANDIDATE_NAME", "Candidate")
+                prep_doc, md_path, docx_path = generate_prep_for_job(
+                    job=job,
+                    cv=cv_signals,
+                    candidate_name=candidate_name,
+                    output_dir=outputs_dir / "prep",
+                    cv_excerpt=cv_signals.raw_text,
+                    write_docx=True,
+                )
+
+                review_summary = None
+                if do_review:
+                    emit({"phase": "reviewing"})
+                    try:
+                        report = review_prep_doc(md_path.read_text(encoding="utf-8"))
+                        review_md = render_review_markdown(report)
+                        with open(md_path, "a", encoding="utf-8") as f:
+                            f.write(review_md)
+                        review_summary = {
+                            "score": report.overall_score,
+                            "findings": len(report.findings),
+                            "recommendation": report.ship_recommendation,
+                        }
+                    except Exception as e:
+                        review_summary = {"error": str(e)}
+
+                emit({"phase": "writing_files"})
+                emit({
+                    "phase": "done",
+                    "company": job.company,
+                    "title": job.title,
+                    "markdown_path": str(md_path),
+                    "docx_path": str(docx_path) if docx_path else None,
+                    "review": review_summary,
+                })
+            except Exception as e:
+                emit({"phase": "error", "error": str(e)})
+
+        thread = _threading.Thread(target=worker, daemon=True)
+        thread.start()
+        start = _time.time()
+
+        while True:
+            try:
+                event = events.get(timeout=2.0)
+                yield f"data: {_json.dumps(event)}\n\n"
+                if event.get("phase") in ("done", "error"):
+                    break
+            except _queue.Empty:
+                if not thread.is_alive():
+                    # Worker died without emitting terminal event
+                    yield f"data: {_json.dumps({'phase': 'error', 'error': 'worker exited unexpectedly'})}\n\n"
+                    break
+                yield f"data: {_json.dumps({'phase': 'tick', 'elapsed': int(_time.time() - start)})}\n\n"
+
+    return Response(
+        event_stream(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",  # disable nginx buffering if proxied
+        },
+    )
+
+
 @app.route("/api/prep/generate", methods=["POST"])
 def api_generate_prep():
     """Generate an LLM-powered interview prep doc for a job by ID.
