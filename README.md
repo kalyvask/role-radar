@@ -287,6 +287,8 @@ mypy src
 ```
 src/role_radar/
 ├── main.py              # Typer CLI entry point
+├── agent.py             # Stateful agent: classify, draft, follow up, decide
+├── agent_cli.py         # `role-radar agent {triage,status,draft}` subcommands
 ├── config.py            # Settings and preferences
 ├── cv_parser.py         # CV/resume parsing
 ├── company_sources/     # Company list generation
@@ -298,9 +300,11 @@ src/role_radar/
 │   ├── lever.py
 │   ├── smartrecruiters.py
 │   └── generic_html.py
+├── interview_prep/      # Claude-powered interview prep doc generator
+├── outreach/            # Claude-powered cold outreach drafter
 ├── scoring.py           # Job-CV matching
 ├── dedupe.py            # Deduplication
-├── storage.py           # SQLite caching
+├── storage.py           # SQLite (jobs, companies, applications, drafts, events)
 ├── emailer.py           # Email sending
 ├── reporting.py         # Report generation
 └── utils/
@@ -361,6 +365,67 @@ role-radar prep cv.pdf --rank 1 --review
 - **Model**: Claude Opus 4.7 with adaptive thinking, `effort=high`, `max_tokens=16000`.
 
 The static context (`data/interview_prep/`) is mirrored from [kalyvask/interview-prep](https://github.com/kalyvask/interview-prep). To refresh it after the source repo updates, re-export the TypeScript content files to JSON and replace the snapshots in `data/interview_prep/`.
+
+## Agent layer
+
+The batch pipeline (`role-radar run`) is stateless: it scrapes, scores, emails, and is done. The agent layer adds state — it remembers which jobs you've already triaged, which are in active outreach, which need a follow-up, and which you skipped. Each agent capability is a discrete method (`fetch_new_matches`, `classify_match`, `draft_outreach`, `surface_followups`, `record_decision`, `pipeline_summary`), so the same code path serves both the interactive CLI and a future autonomous loop.
+
+### What it adds
+
+- **Pipeline state** — three new tables in the local SQLite DB: `applications` (per-job status, contact info, timestamps), `outreach_drafts` (subject, body, self-rating, sent flag), `feedback_events` (append-only audit log).
+- **Outreach drafts** — Claude generates a 100–200 word cold email per job, scored 1–10 for honesty about quality. Same Anthropic SDK pattern as the interview prep generator (Opus 4.7, adaptive thinking, prompt-cached system block).
+- **Follow-up surfacing** — applications older than `--stale-days` (default 14) since last contact get flagged for follow-up.
+- **Bridge to existing scoring** — every decision is mirrored to `~/.role_radar/feedback.db` so the existing `learned_adjustment` field in the scorer picks up your saves and skips on the next run.
+
+### Commands
+
+```bash
+# Triage the latest report interactively (save / skip / draft / apply / note)
+role-radar agent triage cv.pdf
+
+# Triage with a custom score threshold and surface borderline matches too
+role-radar agent triage cv.pdf --threshold 65 --show-borderline
+
+# Snapshot of pipeline state (counts by status, follow-ups due)
+role-radar agent status
+
+# Draft outreach for one specific job
+role-radar agent draft cv.pdf --rank 1
+role-radar agent draft cv.pdf --job-id anthropic_pm-claude --contact-name "Jane" --contact-role recruiter
+```
+
+### Customising the outreach voice
+
+The outreach generator ships with sensible default voice rules (no em-dashes, no hedging, S.H.I.T. mechanics, 100–200 words). To override, drop two Markdown files into `data/`:
+
+- `data/outreach_voice.md` — voice and style rules. Replaces the default.
+- `data/outreach_profile.md` — your career arc, distinctive credentials, signature stories. Used to ground the email's hook in something real.
+
+Or point at files anywhere via env vars:
+
+```bash
+ROLE_RADAR_OUTREACH_VOICE=/path/to/voice.md
+ROLE_RADAR_OUTREACH_PROFILE=/path/to/profile.md
+```
+
+Both are optional. The generator only uses them when present.
+
+### Typical workflow
+
+```bash
+# 1. Refresh the report
+role-radar run cv.pdf --skip-fetch    # or fully fetch if it's been a few days
+
+# 2. Triage
+role-radar agent triage cv.pdf
+#   For each match: [s]ave / [a]pply / [d]raft / [k]skip / [n]otes / [q]uit
+#   Drafts persist; follow-ups surface at the end of each session.
+
+# 3. Anytime: pipeline check
+role-radar agent status
+```
+
+The agent never sends email on its own. It generates drafts and persists them; sending is manual (or a future feature). All decisions are written to local SQLite — no remote state.
 
 ## License
 

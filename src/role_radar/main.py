@@ -46,6 +46,10 @@ app = typer.Typer(
 )
 console = Console()
 
+# Agent subcommand group: `role-radar agent triage|status|draft`
+from role_radar.agent_cli import app as agent_app
+app.add_typer(agent_app, name="agent")
+
 
 def version_callback(value: bool) -> None:
     if value:

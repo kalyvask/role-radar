@@ -3,6 +3,7 @@
 import json
 import sqlite3
 from datetime import datetime, timedelta
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 
@@ -10,6 +11,34 @@ from role_radar.models import ATSType, Company, CompanyType, Job, JobLocation, R
 from role_radar.utils.logging import get_logger
 
 logger = get_logger(__name__)
+
+
+class ApplicationStatus(str, Enum):
+    """Pipeline status for a job. New states can be added as the agent grows."""
+    NEW = "new"
+    SAVED = "saved"
+    OUTREACH_DRAFTED = "outreach_drafted"
+    OUTREACH_SENT = "outreach_sent"
+    APPLIED = "applied"
+    RESPONDED = "responded"
+    INTERVIEWING = "interviewing"
+    OFFER = "offer"
+    REJECTED = "rejected"
+    WITHDRAWN = "withdrawn"
+    SKIPPED = "skipped"
+
+
+class FeedbackAction(str, Enum):
+    """Discrete actions the user takes on a job (audit log)."""
+    SAVED = "saved"
+    SKIPPED = "skipped"
+    DRAFTED = "drafted"
+    SENT = "sent"
+    APPLIED = "applied"
+    REJECTED = "rejected"
+    WITHDREW = "withdrew"
+    NOTED = "noted"
+    RATED = "rated"
 
 
 class Storage:
@@ -99,6 +128,59 @@ class Storage:
             )
         """)
 
+        # Applications — one row per job that's entered the agent's pipeline.
+        # Status moves forward over time; columns nullable so L's send/contact
+        # discovery can populate them later without a schema migration.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS applications (
+                job_id TEXT PRIMARY KEY,
+                status TEXT NOT NULL,
+                user_rating INTEGER,
+                contact_name TEXT,
+                contact_email TEXT,
+                contact_role TEXT,
+                applied_at TEXT,
+                last_contact_at TEXT,
+                next_followup_at TEXT,
+                notes TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (job_id) REFERENCES jobs(id)
+            )
+        """)
+
+        # Outreach drafts — many drafts per job possible (variants, retries).
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS outreach_drafts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id TEXT NOT NULL,
+                variant TEXT NOT NULL DEFAULT 'default',
+                subject TEXT NOT NULL,
+                body TEXT NOT NULL,
+                rationale TEXT,
+                self_rating INTEGER,
+                drafted_at TEXT NOT NULL,
+                sent INTEGER DEFAULT 0,
+                sent_at TEXT,
+                FOREIGN KEY (job_id) REFERENCES jobs(id)
+            )
+        """)
+
+        # Feedback events — append-only audit log of every decision the user
+        # makes through the agent. Distinct from web/app.py's job_feedback
+        # which stores current like/dislike state.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS feedback_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                job_id TEXT NOT NULL,
+                action TEXT NOT NULL,
+                reason TEXT,
+                metadata TEXT,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (job_id) REFERENCES jobs(id)
+            )
+        """)
+
         # Create indexes
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_jobs_company_slug
@@ -107,6 +189,18 @@ class Storage:
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_jobs_fetched_at
             ON jobs(fetched_at)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_applications_status
+            ON applications(status)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_outreach_drafts_job_id
+            ON outreach_drafts(job_id)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_feedback_events_job_id
+            ON feedback_events(job_id)
         """)
 
         conn.commit()
@@ -400,6 +494,255 @@ class Storage:
             email_sent=bool(row["email_sent"]),
             report_path=row["report_path"],
             errors=json.loads(row["errors"]) if row["errors"] else [],
+        )
+
+    # ---- Agent: applications, drafts, feedback events ---------------------
+
+    def get_application(self, job_id: str) -> Optional[dict]:
+        """Return the application row for a job, or None if not in the pipeline."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM applications WHERE job_id = ?", (job_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+    def upsert_application(
+        self,
+        job_id: str,
+        status: ApplicationStatus,
+        *,
+        user_rating: Optional[int] = None,
+        contact_name: Optional[str] = None,
+        contact_email: Optional[str] = None,
+        contact_role: Optional[str] = None,
+        applied_at: Optional[datetime] = None,
+        last_contact_at: Optional[datetime] = None,
+        next_followup_at: Optional[datetime] = None,
+        notes: Optional[str] = None,
+    ) -> None:
+        """Create or update an application row.
+
+        Only non-None fields are written on update — pass None to leave a column
+        unchanged. To clear a field, write a sentinel like '' instead.
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        now = datetime.utcnow().isoformat()
+        existing = self.get_application(job_id)
+
+        if existing is None:
+            cursor.execute("""
+                INSERT INTO applications (
+                    job_id, status, user_rating, contact_name, contact_email,
+                    contact_role, applied_at, last_contact_at, next_followup_at,
+                    notes, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                job_id,
+                status.value,
+                user_rating,
+                contact_name,
+                contact_email,
+                contact_role,
+                applied_at.isoformat() if applied_at else None,
+                last_contact_at.isoformat() if last_contact_at else None,
+                next_followup_at.isoformat() if next_followup_at else None,
+                notes,
+                now,
+                now,
+            ))
+        else:
+            updates: list[tuple[str, object]] = [("status", status.value)]
+            if user_rating is not None:
+                updates.append(("user_rating", user_rating))
+            if contact_name is not None:
+                updates.append(("contact_name", contact_name))
+            if contact_email is not None:
+                updates.append(("contact_email", contact_email))
+            if contact_role is not None:
+                updates.append(("contact_role", contact_role))
+            if applied_at is not None:
+                updates.append(("applied_at", applied_at.isoformat()))
+            if last_contact_at is not None:
+                updates.append(("last_contact_at", last_contact_at.isoformat()))
+            if next_followup_at is not None:
+                updates.append(("next_followup_at", next_followup_at.isoformat()))
+            if notes is not None:
+                updates.append(("notes", notes))
+            updates.append(("updated_at", now))
+
+            set_clause = ", ".join(f"{col} = ?" for col, _ in updates)
+            params = [val for _, val in updates] + [job_id]
+            cursor.execute(
+                f"UPDATE applications SET {set_clause} WHERE job_id = ?",
+                params,
+            )
+
+        conn.commit()
+
+    def list_applications(
+        self,
+        *,
+        status: Optional[ApplicationStatus] = None,
+    ) -> list[dict]:
+        """List applications, optionally filtered by status. Newest first."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+
+        if status is not None:
+            cursor.execute(
+                "SELECT * FROM applications WHERE status = ? ORDER BY updated_at DESC",
+                (status.value,),
+            )
+        else:
+            cursor.execute("SELECT * FROM applications ORDER BY updated_at DESC")
+
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_pipeline_counts(self) -> dict[str, int]:
+        """Return {status: count} across all applications."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT status, COUNT(*) FROM applications GROUP BY status"
+        )
+        return {row[0]: row[1] for row in cursor.fetchall()}
+
+    def save_draft(
+        self,
+        job_id: str,
+        subject: str,
+        body: str,
+        *,
+        variant: str = "default",
+        rationale: Optional[str] = None,
+        self_rating: Optional[int] = None,
+    ) -> int:
+        """Save an outreach draft. Returns the draft id."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO outreach_drafts (
+                job_id, variant, subject, body, rationale, self_rating, drafted_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            job_id,
+            variant,
+            subject,
+            body,
+            rationale,
+            self_rating,
+            datetime.utcnow().isoformat(),
+        ))
+        conn.commit()
+        return cursor.lastrowid
+
+    def get_drafts(self, job_id: str) -> list[dict]:
+        """Get all drafts for a job, newest first.
+
+        Orders by id DESC so two drafts written in the same millisecond
+        still come back in insertion order (drafted_at is second-precision).
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM outreach_drafts WHERE job_id = ? ORDER BY id DESC",
+            (job_id,),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+    def mark_draft_sent(self, draft_id: int) -> None:
+        """Mark a draft as sent. (Used by L; safe to call now.)"""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE outreach_drafts SET sent = 1, sent_at = ? WHERE id = ?",
+            (datetime.utcnow().isoformat(), draft_id),
+        )
+        conn.commit()
+
+    def record_event(
+        self,
+        job_id: str,
+        action: FeedbackAction,
+        *,
+        reason: Optional[str] = None,
+        metadata: Optional[dict] = None,
+    ) -> None:
+        """Append a feedback event to the audit log."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO feedback_events (job_id, action, reason, metadata, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (
+            job_id,
+            action.value,
+            reason,
+            json.dumps(metadata) if metadata else None,
+            datetime.utcnow().isoformat(),
+        ))
+        conn.commit()
+
+    def get_events(self, job_id: str) -> list[dict]:
+        """Get all feedback events for a job, oldest first (audit order)."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM feedback_events WHERE job_id = ? ORDER BY created_at ASC",
+            (job_id,),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+    def get_job_by_id(self, job_id: str) -> Optional[Job]:
+        """Fetch a single job by its id."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        location = JobLocation(
+            city=row["location_city"],
+            state=row["location_state"],
+            country=row["location_country"],
+            remote=bool(row["location_remote"]),
+            hybrid=bool(row["location_hybrid"]),
+            raw_location=row["location_raw"] or "",
+        )
+
+        posted_date = None
+        if row["posted_date"]:
+            try:
+                posted_date = datetime.fromisoformat(row["posted_date"])
+            except ValueError:
+                pass
+
+        raw_data = None
+        if row["raw_data"]:
+            try:
+                raw_data = json.loads(row["raw_data"])
+            except json.JSONDecodeError:
+                pass
+
+        return Job(
+            id=row["id"],
+            external_id=row["external_id"],
+            company=row["company"],
+            company_slug=row["company_slug"],
+            company_type=CompanyType(row["company_type"]),
+            title=row["title"],
+            location=location,
+            description=row["description"],
+            apply_url=row["apply_url"],
+            posted_date=posted_date,
+            department=row["department"],
+            employment_type=row["employment_type"],
+            seniority=row["seniority"],
+            source_ats=ATSType(row["source_ats"]) if row["source_ats"] else ATSType.UNKNOWN,
+            fetched_at=datetime.fromisoformat(row["fetched_at"]),
+            raw_data=raw_data,
         )
 
     def close(self) -> None:
