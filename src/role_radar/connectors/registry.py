@@ -7,6 +7,7 @@ from role_radar.connectors.greenhouse import GreenhouseConnector
 from role_radar.connectors.lever import LeverConnector
 from role_radar.connectors.ashby import AshbyConnector
 from role_radar.connectors.smartrecruiters import SmartRecruitersConnector
+from role_radar.connectors.workday import WorkdayConnector
 from role_radar.connectors.generic_html import GenericHTMLConnector
 from role_radar.models import ATSType, Company, Job
 from role_radar.utils.http import HTTPClient
@@ -27,6 +28,7 @@ class ConnectorRegistry:
             ATSType.LEVER: LeverConnector(http_client),
             ATSType.ASHBY: AshbyConnector(http_client),
             ATSType.SMARTRECRUITERS: SmartRecruitersConnector(http_client),
+            ATSType.WORKDAY: WorkdayConnector(http_client),
             ATSType.GENERIC_HTML: GenericHTMLConnector(http_client),
         }
 

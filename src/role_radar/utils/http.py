@@ -211,6 +211,67 @@ class HTTPClient:
         response = self.get(url, params=params, headers=json_headers, skip_robots_check=skip_robots_check)
         return response.json()
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=30),
+        retry=retry_if_exception(_should_retry),
+        reraise=True,
+    )
+    def post_json(
+        self,
+        url: str,
+        json_body: Optional[dict] = None,
+        headers: Optional[dict] = None,
+        skip_robots_check: bool = False,
+    ) -> Any:
+        """Make a POST request with a JSON body and parse the JSON response.
+
+        Used by ATS connectors (e.g. Workday) that expose POST-only search APIs.
+        Mirrors `get`'s rate limiting, retries, and 429 logging.
+        """
+        domain = self._get_domain(url)
+
+        if self.check_robots and not skip_robots_check:
+            if not self.robots_checker.can_fetch(url):
+                raise ValueError(f"Robots.txt disallows fetching: {url}")
+
+        self.rate_limiter.wait(domain)
+
+        merged_headers = dict(self.session.headers)
+        merged_headers["Accept"] = "application/json"
+        merged_headers["Content-Type"] = "application/json"
+        if headers:
+            merged_headers.update(headers)
+
+        logger.debug("http_request", method="POST", url=url)
+
+        response = self.session.post(
+            url,
+            json=json_body or {},
+            headers=merged_headers,
+            timeout=self.timeout,
+        )
+
+        logger.debug(
+            "http_response",
+            url=url,
+            status_code=response.status_code,
+            content_length=len(response.content),
+        )
+
+        if response.status_code == 429:
+            retry_after = response.headers.get("Retry-After")
+            logger.warning(
+                "http_rate_limited",
+                url=url,
+                domain=domain,
+                retry_after=retry_after,
+                hint="Lower ROLE_RADAR_RATE_LIMIT_REQUESTS_PER_SECOND if this recurs.",
+            )
+
+        response.raise_for_status()
+        return response.json()
+
     def close(self) -> None:
         """Close the HTTP session."""
         self.session.close()

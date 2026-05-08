@@ -484,8 +484,9 @@ add:
 
   - name: "CrowdStrike"
     homepage: "https://crowdstrike.com"
-    careers_url: "https://www.crowdstrike.com/en-us/careers/"
-    ats_type: generic_html
+    careers_url: "https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers"
+    ats_type: workday
+    ats_identifier: "crowdstrike:wd5:crowdstrikecareers"
     category: ai_adjacent
     is_public: true
     employee_count_estimate: 10000
