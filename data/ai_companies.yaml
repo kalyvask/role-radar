@@ -23,7 +23,7 @@
 #   remove:
 #     - "Adept"                        # match by exact name (case-insensitive)
 
-last_updated: "2026-05-07"
+last_updated: "2026-05-08"
 
 add:
   # ===== Big Tech =====
@@ -783,4 +783,18 @@ add:
     category: ai_apps
     description: "AI-powered prediction simulations"
 
-remove: []
+  # ===== Added 2026-05-08 =====
+
+  - name: "Runway"
+    homepage: "https://runwayml.com"
+    careers_url: "https://runwayml.com/careers"
+    ats_type: ashby
+    ats_identifier: "runway-ml"
+    category: ai_apps
+    funding_amount_m: 536
+    description: "Generative AI video models (Gen-3, Gen-4)"
+    notable_achievements: ["Gen-3 Alpha", "AI video generation leader"]
+
+remove:
+  # Seed entry uses dead Greenhouse token "runwayml"; replaced with current Ashby board above.
+  - "Runway"
