@@ -23,7 +23,7 @@
 #   remove:
 #     - "Adept"                        # match by exact name (case-insensitive)
 
-last_updated: "2026-04-27"
+last_updated: "2026-05-07"
 
 add:
   # ===== Big Tech =====
@@ -451,5 +451,335 @@ add:
     employee_count_estimate: 11000
     description: "E-commerce platform"
     notable_achievements: ["Shopify Magic AI", "Sidekick assistant"]
+
+  # ===== Added 2026-05-07: RepVue Top 20 (future outlook) =====
+
+  - name: "MaintainX"
+    homepage: "https://www.getmaintainx.com"
+    careers_url: "https://www.getmaintainx.com/careers"
+    ats_type: ashby
+    ats_identifier: maintainx
+    category: ai_apps
+    funding_amount_m: 254
+    description: "AI-powered CMMS for industrial maintenance"
+
+  - name: "Grafana Labs"
+    homepage: "https://grafana.com"
+    careers_url: "https://grafana.com/about/careers/open-positions/"
+    ats_type: greenhouse
+    ats_identifier: grafanalabs
+    category: ai_dev_tools
+    funding_amount_m: 535
+    description: "Open-source observability platform"
+
+  - name: "Wiz"
+    homepage: "https://wiz.io"
+    careers_url: "https://wiz.io/careers"
+    ats_type: greenhouse
+    ats_identifier: wizinc
+    category: ai_adjacent
+    funding_amount_m: 1900
+    description: "Cloud security platform (acquired by Google for $32B)"
+    notable_achievements: ["Acquired by Google 2025", "Largest cybersecurity acquisition ever"]
+
+  - name: "CrowdStrike"
+    homepage: "https://crowdstrike.com"
+    careers_url: "https://www.crowdstrike.com/en-us/careers/"
+    ats_type: generic_html
+    category: ai_adjacent
+    is_public: true
+    employee_count_estimate: 10000
+    description: "AI-native endpoint security (Falcon)"
+
+  - name: "Samsara"
+    homepage: "https://samsara.com"
+    careers_url: "https://www.samsara.com/company/careers/roles"
+    ats_type: greenhouse
+    ats_identifier: samsara
+    category: ai_apps
+    is_public: true
+    employee_count_estimate: 4000
+    description: "Connected operations cloud for physical operations"
+
+  - name: "Verkada"
+    homepage: "https://verkada.com"
+    careers_url: "https://www.verkada.com/careers/"
+    ats_type: greenhouse
+    ats_identifier: verkada
+    category: ai_apps
+    funding_amount_m: 460
+    description: "Cloud-based physical security and AI video analytics"
+
+  - name: "Gong"
+    homepage: "https://gong.io"
+    careers_url: "https://www.gong.io/careers/"
+    ats_type: greenhouse
+    ats_identifier: gongio
+    category: ai_apps
+    funding_amount_m: 583
+    description: "Revenue intelligence platform with conversation AI"
+
+  - name: "Rubrik"
+    homepage: "https://rubrik.com"
+    careers_url: "https://www.rubrik.com/company/careers"
+    ats_type: greenhouse
+    ats_identifier: rubrik
+    category: ai_adjacent
+    is_public: true
+    employee_count_estimate: 3500
+    description: "Cyber resilience and data security with AI"
+
+  - name: "Rippling"
+    homepage: "https://rippling.com"
+    careers_url: "https://www.rippling.com/careers"
+    ats_type: generic_html
+    category: ai_adjacent
+    funding_amount_m: 1400
+    description: "Workforce management platform"
+    notable_achievements: ["$13.5B valuation"]
+
+  - name: "AlphaSense"
+    homepage: "https://alpha-sense.com"
+    careers_url: "https://www.alpha-sense.com/careers/"
+    ats_type: greenhouse
+    ats_identifier: alphasense
+    category: ai_apps
+    funding_amount_m: 650
+    description: "AI market intelligence search for enterprise"
+
+  - name: "Cloudflare"
+    homepage: "https://cloudflare.com"
+    careers_url: "https://www.cloudflare.com/careers/jobs/"
+    ats_type: greenhouse
+    ats_identifier: cloudflare
+    category: ai_adjacent
+    is_public: true
+    employee_count_estimate: 4000
+    description: "Edge cloud, Workers AI inference platform"
+
+  - name: "Vanta"
+    homepage: "https://vanta.com"
+    careers_url: "https://www.vanta.com/company/careers"
+    ats_type: ashby
+    ats_identifier: vanta
+    category: ai_adjacent
+    funding_amount_m: 353
+    description: "AI-powered compliance and trust automation"
+
+  - name: "Datadog"
+    homepage: "https://datadoghq.com"
+    careers_url: "https://careers.datadoghq.com/all-jobs/"
+    ats_type: greenhouse
+    ats_identifier: datadog
+    category: ai_dev_tools
+    is_public: true
+    employee_count_estimate: 7000
+    description: "Observability platform with Bits AI assistant"
+
+  # ===== Added 2026-05-07: AI Neolabs (frontier research labs) =====
+
+  - name: "Project Prometheus"
+    homepage: "https://projectprometheus.ai"
+    careers_url: "https://projectprometheus.ai/careers"
+    ats_type: generic_html
+    category: frontier_lab
+    funding_amount_m: 32000
+    description: "Frontier AI research lab"
+
+  - name: "Periodic Labs"
+    homepage: "https://periodiclabs.ai"
+    careers_url: "https://periodiclabs.ai/careers"
+    ats_type: ashby
+    ats_identifier: periodic-labs
+    category: frontier_lab
+    funding_amount_m: 7000
+    description: "AI for scientific discovery"
+
+  - name: "Sakana AI"
+    homepage: "https://sakana.ai"
+    careers_url: "https://sakana.ai/careers/"
+    ats_type: generic_html
+    category: frontier_lab
+    funding_amount_m: 250
+    description: "Nature-inspired foundation models (Tokyo + SF)"
+
+  - name: "Liquid AI"
+    homepage: "https://liquid.ai"
+    careers_url: "https://liquid.ai/careers"
+    ats_type: ashby
+    ats_identifier: liquid-ai
+    category: frontier_lab
+    funding_amount_m: 250
+    description: "Liquid foundation models (MIT spinout)"
+
+  - name: "Harmonic"
+    homepage: "https://harmonic.fun"
+    careers_url: "https://harmonic.fun/careers"
+    ats_type: ashby
+    ats_identifier: harmonic
+    category: frontier_lab
+    funding_amount_m: 100
+    description: "Mathematical superintelligence"
+
+  - name: "AI21 Labs"
+    homepage: "https://ai21.com"
+    careers_url: "https://www.ai21.com/careers/"
+    ats_type: generic_html
+    category: frontier_lab
+    funding_amount_m: 336
+    description: "Enterprise foundation models (Jurassic, Jamba)"
+
+  - name: "EvolutionaryScale"
+    homepage: "https://evolutionaryscale.ai"
+    careers_url: "https://www.evolutionaryscale.ai/careers"
+    ats_type: greenhouse
+    ats_identifier: evolutionaryscale
+    category: frontier_lab
+    funding_amount_m: 142
+    description: "Frontier biology models (ESM3 protein language model)"
+
+  - name: "Imbue"
+    homepage: "https://imbue.com"
+    careers_url: "https://imbue.com/careers/"
+    ats_type: greenhouse
+    ats_identifier: imbue
+    category: frontier_lab
+    funding_amount_m: 220
+    description: "AI agents that reason and code"
+
+  - name: "Kyutai"
+    homepage: "https://kyutai.org"
+    careers_url: "https://kyutai.org/careers"
+    ats_type: generic_html
+    category: frontier_lab
+    description: "Open science AI lab (Paris)"
+
+  - name: "Prime Intellect"
+    homepage: "https://primeintellect.ai"
+    careers_url: "https://www.primeintellect.ai/careers"
+    ats_type: ashby
+    ats_identifier: primeintellect
+    category: frontier_lab
+    funding_amount_m: 20
+    description: "Decentralized AI training compute"
+
+  - name: "Arcee AI"
+    homepage: "https://arcee.ai"
+    careers_url: "https://www.arcee.ai/careers"
+    ats_type: greenhouse
+    ats_identifier: arceeai
+    category: frontier_lab
+    funding_amount_m: 27
+    description: "Small language models for enterprise"
+
+  - name: "Essential AI"
+    homepage: "https://essential.ai"
+    careers_url: "https://essential.ai/careers"
+    ats_type: ashby
+    ats_identifier: essentialai
+    category: frontier_lab
+    funding_amount_m: 56
+    description: "Enterprise foundation models (Ashish Vaswani / 'Attention' co-author)"
+
+  - name: "Nous Research"
+    homepage: "https://nousresearch.com"
+    careers_url: "https://nousresearch.com/careers"
+    ats_type: ashby
+    ats_identifier: nous
+    category: frontier_lab
+    funding_amount_m: 50
+    description: "Open-source AI research collective"
+
+  - name: "Inception Labs"
+    homepage: "https://inceptionlabs.ai"
+    careers_url: "https://www.inceptionlabs.ai/careers"
+    ats_type: generic_html
+    category: frontier_lab
+    description: "Diffusion-based language models"
+
+  - name: "Adaption Labs"
+    homepage: "https://adaption.ai"
+    careers_url: "https://adaption.ai/careers"
+    ats_type: ashby
+    ats_identifier: adaption
+    category: frontier_lab
+    description: "Self-improving AI agents"
+
+  - name: "Genesis AI"
+    homepage: "https://genesis-ai.com"
+    careers_url: "https://genesis-ai.com/careers"
+    ats_type: ashby
+    ats_identifier: genesis-ai
+    category: frontier_lab
+    description: "Generative physics and robotics simulation"
+
+  - name: "Isomorphic Labs"
+    homepage: "https://isomorphiclabs.com"
+    careers_url: "https://www.isomorphiclabs.com/careers"
+    ats_type: greenhouse
+    ats_identifier: isomorphiclabs
+    category: ai_apps
+    funding_amount_m: 600
+    description: "AI-first drug discovery (Alphabet spinout)"
+
+  - name: "Xaira Therapeutics"
+    homepage: "https://xaira.com"
+    careers_url: "https://xaira.com/careers"
+    ats_type: greenhouse
+    ats_identifier: xairatherapeutics
+    category: ai_apps
+    funding_amount_m: 1000
+    description: "AI-powered drug discovery"
+
+  - name: "Lila Sciences"
+    homepage: "https://lila.ai"
+    careers_url: "https://lila.ai/careers"
+    ats_type: greenhouse
+    ats_identifier: lilasciences
+    category: ai_apps
+    funding_amount_m: 200
+    description: "Scientific superintelligence (Flagship Pioneering)"
+
+  - name: "Decart"
+    homepage: "https://decart.ai"
+    careers_url: "https://decart.ai/careers"
+    ats_type: ashby
+    ats_identifier: decart-ai
+    category: frontier_lab
+    funding_amount_m: 53
+    description: "Real-time generative AI / open-world models"
+
+  - name: "Standard Intelligence"
+    homepage: "https://www.standardintelligence.com"
+    careers_url: "https://www.standardintelligence.com/careers"
+    ats_type: generic_html
+    category: frontier_lab
+    description: "AGI research lab"
+
+  - name: "Recursion"
+    homepage: "https://recursion.com"
+    careers_url: "https://www.recursion.com/careers"
+    ats_type: greenhouse
+    ats_identifier: recursionpharmaceuticals
+    category: ai_apps
+    is_public: true
+    description: "AI-driven biotech"
+
+  - name: "H Company"
+    homepage: "https://h.company"
+    careers_url: "https://www.h.company/careers"
+    ats_type: ashby
+    ats_identifier: hcompany
+    category: frontier_lab
+    funding_amount_m: 220
+    description: "Action models for agentic workflows (Paris)"
+
+  - name: "Aaru"
+    homepage: "https://aaru.com"
+    careers_url: "https://aaru.com/careers"
+    ats_type: ashby
+    ats_identifier: aaru
+    category: ai_apps
+    description: "AI-powered prediction simulations"
 
 remove: []
