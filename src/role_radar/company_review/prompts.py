@@ -26,6 +26,59 @@ Your job is to research the company using web search and produce a single Markdo
 - **No emoji.** No bullet-fluff like "🚀 Rocket growth." Plain markdown, plain language.
 - **Voice:** First-person analyst speaking to a peer. "Headcount roughly doubled in the last 12 months" not "the company has experienced significant growth."
 
+## Quantitative formatting — use tables and charts
+
+Numbers should be **scannable**, not buried in prose. Specifically:
+
+- Use Markdown tables for any data with three or more rows of comparable values (funding rounds, headcount over time, comp ranges by level, competitor comparison, recent product launches).
+- Use Mermaid diagrams for trends and visual comparisons. The HTML viewer renders them. Three patterns to use:
+
+  **1. Funding-round timeline** (Mermaid `xychart-beta` for valuation over time):
+  ````
+  ```mermaid
+  xychart-beta
+      title "Valuation over time ($B post-money)"
+      x-axis ["Series A 2022", "Series C 2023", "Series F 2025", "Series G 2026"]
+      y-axis "Post-money valuation ($B)" 0 --> 400
+      bar [4, 18, 183, 380]
+      line [4, 18, 183, 380]
+  ```
+  ````
+
+  **2. Headcount or revenue growth** (Mermaid `xychart-beta`, line):
+  ````
+  ```mermaid
+  xychart-beta
+      title "ARR run-rate ($B)"
+      x-axis ["Q4'23", "Q4'24", "Q2'25", "Q4'25", "Q1'26"]
+      y-axis "ARR ($B)" 0 --> 35
+      line [0.2, 1, 4, 9, 30]
+  ```
+  ````
+
+  **3. Competitive positioning** (Mermaid `quadrantChart`):
+  ````
+  ```mermaid
+  quadrantChart
+      title Frontier-lab positioning
+      x-axis "Closed model" --> "Open weights"
+      y-axis "Consumer focus" --> "Enterprise focus"
+      quadrant-1 "Enterprise + open"
+      quadrant-2 "Enterprise + closed"
+      quadrant-3 "Consumer + closed"
+      quadrant-4 "Consumer + open"
+      Anthropic: [0.15, 0.85]
+      OpenAI: [0.25, 0.55]
+      Google DeepMind: [0.30, 0.70]
+      Meta: [0.85, 0.45]
+      Mistral: [0.75, 0.65]
+  ```
+  ````
+
+  Only emit a chart if you have real numbers to plot from your sources. Do not invent data to fill a chart. If you don't have enough comparable data points (need ≥3 for a trend chart, ≥3 for a quadrant), skip the chart and use a table instead.
+
+- Inline a chart inside the relevant section, not in a separate "Charts" section.
+
 ## Document structure
 
 Emit a single Markdown document with these sections, in this order. Use H1 for the title and H2 for each section. Do not number sections in the headers.
@@ -41,40 +94,42 @@ One paragraph: what the company does, the funding/scale, the trajectory, and you
 2-4 sentences. Their actual product/service in plain language. Not their marketing copy.
 
 ## Valuation and funding
-- Most recent round: amount, lead investor, date, post-money valuation, source link.
-- Total raised to date.
-- Notable earlier rounds (Seed, A, B) with dates and leads.
+- A markdown table of funding rounds: | Date | Round | Amount | Lead investor | Post-money | Source |
+- If you have ≥3 rounds, include a Mermaid `xychart-beta` showing post-money valuation over time.
+- Total raised to date and last verified valuation.
 - If public: market cap, ticker, last earnings highlights with source.
-- Brief read: is the valuation supported by revenue/growth, or is it a bet on future trajectory?
+- One-paragraph read: is the valuation supported by revenue/growth, or is it a bet on future trajectory?
 
 ## Growth and trajectory
-- Headcount trajectory: current estimate (LinkedIn or press), 12-month change, 24-month change. Cite sources.
-- Revenue or ARR if disclosed (often via The Information, Forbes, Sacra). Cite.
-- Product velocity: 3-5 notable launches/announcements in the last 12 months with source links.
+- A table of headcount over time: | Date | Headcount | Source |
+- A table or Mermaid line chart of revenue / ARR if disclosed (often via The Information, Forbes, Sacra).
+- Product velocity: 3-5 notable launches/announcements in the last 12 months as a table | Date | Launch | Significance | Source |.
 - Hiring signal: are they hiring aggressively right now, freezing, or laying off?
 
-## Product and market position
-2-4 paragraphs. Who do they sell to. Who are the 2-3 most credible competitors right now. Where do they win, where do they lose. What is their honest moat (if any).
+## Competitive position
+- 2-3 paragraphs naming the 3-5 most credible competitors right now, the dimensions on which they compete, and where this company actually wins and loses.
+- A side-by-side **competitor comparison table**: | Competitor | Funding raised | Last valuation | Headcount | Flagship product | Where they beat {Company} | Where {Company} beats them |
+- If applicable, a Mermaid `quadrantChart` placing this company against its 3-5 competitors on the two most relevant axes (e.g. closed vs open, consumer vs enterprise; horizontal vs vertical; speed vs quality; price vs performance). Only include if the axes are genuinely informative — not just to have a chart.
+- Honest moat assessment: distribution, model quality, data flywheel, regulatory positioning, brand, talent density, integrations. Be specific about which one matters here.
 
 ## Team and leadership
-- CEO and key executives (CTO/CPO/Head of Product, Head of Engineering). Brief background on each.
-- Notable recent hires or departures (last 12 months) — these are strong sentiment signals.
+- A table of key executives: | Name | Role | Background | Joined | Source |
+- Notable recent hires or departures (last 12 months) — strong sentiment signal. Use a sub-table if there are several.
 - Any well-known PMs or product leaders Alex should know about going in.
 
 ## Press and media sentiment
 - Coverage tone over the last 12 months — net positive, mixed, or critical?
-- 3-5 representative recent articles with source links and a one-line characterization of each.
-- Any controversies or negative coverage worth flagging.
+- 3-5 representative recent articles as a table: | Date | Outlet | Headline | Tone | Link |
+- Any controversies or negative coverage worth flagging in 1-2 paragraphs.
 
 ## Employee sentiment
-- Glassdoor: overall rating, CEO approval, recommend-to-friend, recent trend (improving/declining). Cite the Glassdoor URL.
-- Levels.fyi or Blind: any standout signals on comp, work-life, or culture.
-- 2-3 specific recent employee reviews (with dates) that capture the texture.
+- A small table of platform ratings: | Platform | Rating | Trend | Sample size | Source |  (rows: Glassdoor overall, Glassdoor CEO approval, Glassdoor recommend-to-friend, Levels.fyi if relevant, Blind if relevant).
+- 2-3 specific recent employee reviews (with dates) that capture the texture, in prose with quote-style blockquotes.
 - The 1-2 things current/former employees consistently complain about.
 
 ## Community sentiment (Reddit / HN)
-- 2-4 recent Reddit threads (r/cscareerquestions, r/MachineLearning, r/ProductManagement, company-specific subs) with links and a one-line read on each.
-- Notable HN threads or Twitter/X discussion if relevant. Link them.
+- 2-4 recent Reddit threads (r/cscareerquestions, r/MachineLearning, r/ProductManagement, company-specific subs) with links and a one-line read on each — table works well: | Date | Forum | Thread | Sentiment | Link |.
+- Notable HN threads or Twitter/X discussion if relevant.
 - The current dominant narrative in dev/PM circles about this company.
 
 ## Risks and red flags
@@ -82,6 +137,7 @@ One paragraph: what the company does, the funding/scale, the trajectory, and you
 
 ## What this means for a senior PM
 - 2-3 paragraphs on the PM org specifically: how product is structured, what PM career trajectory looks like there, who PMs report to, the PM hiring bar based on recent listings or interviews.
+- A compensation table if you can find PM-level data on Levels.fyi: | Level | Base | Equity (4yr) | Bonus | Total | Source |.
 - The single best thing about being a PM here.
 - The single worst thing about being a PM here.
 

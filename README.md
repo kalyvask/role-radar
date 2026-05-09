@@ -1,11 +1,12 @@
 # Role Radar 🎯
 
-End-to-end PM job hunt for AI companies: find relevant roles, score them against your CV, then generate a candidate-tailored LLM interview prep doc for any one with a single click.
+End-to-end PM job hunt for AI companies: find relevant roles, score them against your CV, then generate a candidate-tailored LLM interview prep doc — and an investor-grade company review — for any one with a single click.
 
-Two workflows in one tool:
+Three workflows in one tool:
 
-1. **Discovery** — pulls live job postings from ~80 curated AI companies (frontier labs, AI infra, AI apps, dev tools) and VC-backed startups across Greenhouse, Lever, Ashby, SmartRecruiters, and a generic HTML fallback. Scores each role 0–100 against your CV across title/seniority, skills, domains, location, and company preference. Reads from a local SQLite cache, so you can replay scoring without re-fetching.
+1. **Discovery** — pulls live job postings from ~120 curated AI companies (frontier labs, AI infra, AI apps, dev tools) and VC-backed startups across Greenhouse, Lever, Ashby, SmartRecruiters, Workday, and a generic HTML fallback. Scores each role 0–100 against your CV across title/seniority, skills, domains, location, and company preference. Reads from a local SQLite cache, so you can replay scoring without re-fetching.
 2. **Interview prep** — for any job in the latest report, generate a comprehensive prep report covering the company, the role, and the likely interview questions for it (pulled from public signals about how that company interviews), then auto-adjust which of your CV stories to tell so each one maps to what the role actually wants. Built on Claude Opus 4.7 with adaptive thinking, structured Pydantic output, and prompt-cached static context (frameworks, calibrations, per-company playbooks). Streams live progress to the UI button (parsing → calling Claude → reviewing → writing files), runs a second-pass critic that scores the doc 1–10 with severity-tagged findings, and auto-opens the result as a styled HTML view + downloadable Word file.
+3. **Company review** — for any company on a job card, generate an investor-grade analysis doc covering valuation, funding rounds (with timeline chart), growth trajectory (headcount, ARR), competitive position (with quadrant chart vs the 3-5 most credible rivals), team & leadership, press sentiment, employee sentiment (Glassdoor / Levels / Blind), Reddit/HN community signal, risks, and a verdict (Strong apply / Apply with caveats / Pass / Inconclusive). Uses Claude Sonnet 4.5 with the server-side `web_search` tool to research live (15-25 queries), cites every numeric claim inline, and renders Mermaid charts + Markdown tables in the styled HTML view.
 
 This repo ships clean — no CV, no name, no personal data. See [Personalize this for your own use](#personalize-this-for-your-own-use) for the 5-minute setup.
 
@@ -51,10 +52,11 @@ You're done. Run `role-radar run "$ROLE_RADAR_CV_PATH"` for a dry run, or jump t
 ## Features
 
 - **Curated company lists** — transparent scoring methodology for Top 20 AI companies and Top VCs
-- **Multi-ATS support** — connectors for Greenhouse, Lever, Ashby, SmartRecruiters, generic HTML
+- **Multi-ATS support** — connectors for Greenhouse, Lever, Ashby, SmartRecruiters, **Workday**, generic HTML
 - **Smart matching** — CV-based scoring across title/seniority, skills, domains, location, with a learned-preferences layer driven by like/dislike feedback
 - **Web review UI** — Flask UI to browse matches, like/dislike to train the scorer, take notes, mark applied
 - **Interview prep generator** — Claude Opus 4.7 with adaptive thinking, prompt-cached static context (frameworks, calibrations, per-company playbooks), structured Pydantic output, second-pass review critic, live SSE progress streaming, Markdown + DOCX output
+- **Company review generator** — Claude Sonnet 4.5 with the server-side `web_search` tool researches each company live (15-25 queries) and emits an investor-grade Markdown doc with valuation timeline chart, ARR growth chart, competitor quadrant chart, funding-rounds table, comp tables, and inline-cited press / Glassdoor / Reddit sentiment
 - **Email reports** — HTML emails with match rationale and score breakdowns
 - **Local caching** — SQLite for jobs/companies, prompt cache for the LLM
 - **Observability** — structured JSON logging and run summaries

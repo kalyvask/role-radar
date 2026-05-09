@@ -1260,9 +1260,22 @@ def view_review_doc(filename: str):
         return "review markdown not found", 404
 
     md_text = md_path.read_text(encoding="utf-8")
-    html_body = _markdown.markdown(
+
+    # Convert ```mermaid blocks into <div class="mermaid"> so mermaid.js can
+    # find and render them after the markdown→HTML conversion runs. We do
+    # this BEFORE handing the doc to the markdown extension so the fenced
+    # block doesn't get wrapped in <pre><code>.
+    import re as _re
+    md_text_for_render = _re.sub(
+        r"```mermaid\n(.*?)```",
+        lambda m: f'<div class="mermaid">\n{m.group(1)}\n</div>',
         md_text,
-        extensions=["extra", "sane_lists", "smarty", "toc"],
+        flags=_re.DOTALL,
+    )
+
+    html_body = _markdown.markdown(
+        md_text_for_render,
+        extensions=["extra", "sane_lists", "smarty", "toc", "tables"],
         output_format="html5",
     )
 
@@ -1281,6 +1294,22 @@ def view_review_doc(filename: str):
 <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
 <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
 <link href=\"https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap\" rel=\"stylesheet\">
+<script type=\"module\">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({{
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {{
+      fontFamily: 'Inter, sans-serif',
+      primaryColor: '#E3F2FD',
+      primaryTextColor: '#1F1D1A',
+      primaryBorderColor: '#1565C0',
+      lineColor: '#1565C0',
+      secondaryColor: '#FBEBE0',
+      tertiaryColor: '#F7F6F3',
+    }},
+  }});
+</script>
 <style>
   :root {{
     --bg: #F7F6F3; --surface: #FFFFFF; --rule: #EAE7E0; --rule-soft: #F0EDE6;
@@ -1334,10 +1363,54 @@ def view_review_doc(filename: str):
     font-family: 'JetBrains Mono', Consolas, monospace; font-size: 0.92em;
     background: var(--rule-soft); padding: 2px 6px; border-radius: 3px;
   }}
+  /* Tables: clean, scannable, not heavy. */
+  table {{
+    border-collapse: collapse;
+    margin: 18px 0 22px;
+    width: 100%;
+    font-size: 14.5px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    overflow: hidden;
+  }}
+  thead {{ background: var(--rule-soft); }}
+  th, td {{
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }}
+  th {{
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }}
+  tbody tr:last-child td {{ border-bottom: none; }}
+  tbody tr:hover {{ background: var(--rule-soft); }}
+  td a {{ word-break: break-word; }}
+  /* Mermaid charts: centered, with a soft frame. */
+  .mermaid {{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 160px;
+    margin: 24px 0 28px;
+    padding: 18px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    overflow-x: auto;
+  }}
+  .mermaid svg {{ max-width: 100%; height: auto; }}
   @media (max-width: 640px) {{
     body {{ padding: 32px 16px 64px; }}
     h1 {{ font-size: 32px; }} h2 {{ font-size: 24px; }}
     .toolbar {{ position: static; margin-bottom: 24px; }}
+    table {{ font-size: 13px; }}
+    th, td {{ padding: 8px 10px; }}
   }}
   @media print {{ .toolbar {{ display: none; }} body {{ background: white; padding: 0; }} }}
 </style>
