@@ -30,10 +30,11 @@ from role_radar.utils.logging import get_logger
 logger = get_logger(__name__)
 
 
-# Sonnet is the right pick here: long-context research + many tool calls. Opus
-# would be slower and more expensive without notably better facts. If quality
-# regresses, override via the `model` parameter.
-MODEL_ID = "claude-sonnet-4-5"
+# Opus 4.7 — same model as the interview prep generator. Slower and more
+# expensive than Sonnet for this workload (15+ tool calls), but the analysis
+# quality, source triangulation, and competitive reasoning are noticeably
+# sharper. Override via the `model` parameter if cost matters more than depth.
+MODEL_ID = "claude-opus-4-7"
 MAX_TOKENS = 16000
 MAX_WEB_SEARCH_USES = 25
 
