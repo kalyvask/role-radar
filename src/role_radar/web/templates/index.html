@@ -808,6 +808,9 @@
                                 <button class="research-link" onclick="event.stopPropagation(); generatePrep('${job.id}', this, true)" title="Generate LLM-powered interview prep doc + run second-pass critic" style="background: #1F1D1A; color: white; border-color: #1F1D1A;">
                                     📄 Generate prep
                                 </button>
+                                <button class="research-link" onclick="event.stopPropagation(); generateCompanyReview('${escapeAttr(job.company)}', this)" title="Generate investor-grade company review (valuation, growth, sentiment) using Claude + web search" style="background: #1565C0; color: white; border-color: #1565C0;">
+                                    🔍 Company review
+                                </button>
                             </div>
 
                             <!-- Score breakdown -->
@@ -1060,6 +1063,86 @@
                     btn.innerHTML = '❌ Stream error';
                     btn.style.opacity = '1';
                     showToast('Lost connection during generation. Check the server log.', 'error');
+                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 5000);
+                }
+            };
+        }
+
+        // Escape a value for use inside a single-quoted onclick attribute string.
+        function escapeAttr(text) {
+            if (!text) return '';
+            return String(text).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        }
+
+        // Generate a company review (web_search-backed) via SSE.
+        function generateCompanyReview(company, btn) {
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            btn.innerHTML = '⏳ Starting...';
+
+            const phaseLabels = {
+                starting:      '🔧 Starting...',
+                researching:   '🔎 Researching (~90s)',
+                writing_files: '💾 Writing files...',
+            };
+            let currentPhase = '';
+            let phaseStartElapsed = 0;
+
+            const url = `/api/review/stream?company=${encodeURIComponent(company)}`;
+            const es = new EventSource(url);
+
+            es.onmessage = (e) => {
+                let data;
+                try { data = JSON.parse(e.data); } catch { return; }
+
+                if (data.phase === 'tick') {
+                    if (phaseStartElapsed === -1) phaseStartElapsed = data.elapsed;
+                    const inPhase = Math.max(0, data.elapsed - phaseStartElapsed);
+                    const label = phaseLabels[currentPhase] || '⏳ Working...';
+                    btn.innerHTML = `${label} · ${inPhase}s`;
+                    return;
+                }
+
+                if (data.phase === 'done') {
+                    es.close();
+                    const mdName = data.markdown_path.split(/[\\/]/).pop();
+                    btn.innerHTML = `<a href="/review-view/${encodeURIComponent(mdName)}" target="_blank" style="color:white;text-decoration:underline">📖 Open review</a>`;
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.onclick = (ev) => ev.stopPropagation();
+
+                    const verdict = data.signal ? ` · ${data.signal}` : '';
+                    const tokens = data.output_tokens ? ` · ${data.output_tokens} out tok` : '';
+                    const searches = data.web_search_count ? ` · ${data.web_search_count} searches` : '';
+                    showToast(`Review ready: ${company}${verdict}${searches}${tokens}`, 'success');
+
+                    window.open(`/review-view/${encodeURIComponent(mdName)}`, '_blank');
+                    return;
+                }
+
+                if (data.phase === 'error') {
+                    es.close();
+                    btn.innerHTML = '❌ Failed';
+                    btn.style.opacity = '1';
+                    showToast(data.error || 'Company review failed', 'error');
+                    setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 5000);
+                    return;
+                }
+
+                if (phaseLabels[data.phase]) {
+                    currentPhase = data.phase;
+                    btn.innerHTML = phaseLabels[data.phase];
+                    phaseStartElapsed = -1;
+                }
+            };
+
+            es.onerror = () => {
+                es.close();
+                if (btn.disabled) {
+                    btn.innerHTML = '❌ Stream error';
+                    btn.style.opacity = '1';
+                    showToast('Lost connection during company review.', 'error');
                     setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 5000);
                 }
             };

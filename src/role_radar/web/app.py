@@ -1202,6 +1202,290 @@ def api_generate_prep():
     })
 
 
+# ----- Company Review (LLM-powered, web_search-backed) ---------------------
+
+
+def _resolve_company_hints(company: str) -> dict:
+    """Look up homepage / careers / category / funding for a company name.
+
+    Tries the merged AI seed list + YAML overrides. Returns an empty dict if
+    the company isn't tracked — the generator will still run, just without hints.
+    """
+    try:
+        from role_radar.company_sources.ai_top20 import (
+            AI_COMPANIES_SEED,
+            load_overrides,
+        )
+    except Exception:
+        return {}
+
+    overrides_path = Path.cwd() / "data" / "ai_companies.yaml"
+    additions, removals = load_overrides(overrides_path) if overrides_path.exists() else ([], set())
+    pool = [c for c in AI_COMPANIES_SEED if c.name.lower() not in removals] + additions
+
+    target = company.strip().lower()
+    for c in pool:
+        if c.name.lower() == target:
+            return {
+                "homepage": getattr(c, "homepage", None),
+                "careers_url": getattr(c, "careers_url", None),
+                "category": getattr(c.category, "value", None) if getattr(c, "category", None) else None,
+                "funding_amount_m": getattr(c, "funding_amount_m", None),
+            }
+    return {}
+
+
+@app.route("/review-files/<path:filename>")
+def serve_review_file(filename: str):
+    """Serve a generated company review (Markdown) from outputs/reviews/."""
+    outputs_dir = Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR))
+    reviews_dir = outputs_dir / "reviews"
+    if not reviews_dir.exists():
+        return "reviews directory not found", 404
+    return send_from_directory(reviews_dir, filename, as_attachment=False)
+
+
+@app.route("/review-view/<path:filename>")
+def view_review_doc(filename: str):
+    """Render a company review Markdown file as styled HTML for in-browser reading.
+
+    Uses the same visual treatment as the prep doc viewer (Fraunces serif,
+    wide margins, hairline rules) so the two doc types feel like a set.
+    """
+    import markdown as _markdown
+
+    outputs_dir = Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR))
+    md_path = outputs_dir / "reviews" / filename
+    if not md_path.exists() or not md_path.is_file() or md_path.suffix != ".md":
+        return "review markdown not found", 404
+
+    md_text = md_path.read_text(encoding="utf-8")
+    html_body = _markdown.markdown(
+        md_text,
+        extensions=["extra", "sane_lists", "smarty", "toc"],
+        output_format="html5",
+    )
+
+    page_title = filename
+    for line in md_text.splitlines():
+        if line.startswith("# "):
+            page_title = line[2:].strip()
+            break
+
+    return f"""<!DOCTYPE html>
+<html lang=\"en\">
+<head>
+<meta charset=\"UTF-8\">
+<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+<title>{page_title}</title>
+<link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
+<link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
+<link href=\"https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap\" rel=\"stylesheet\">
+<style>
+  :root {{
+    --bg: #F7F6F3; --surface: #FFFFFF; --rule: #EAE7E0; --rule-soft: #F0EDE6;
+    --ink: #1F1D1A; --ink-muted: #6E6A63; --ink-soft: #9A958C;
+    --accent: #1565C0; --accent-bg: #E3F2FD; --good: #15803D;
+  }}
+  * {{ box-sizing: border-box; }}
+  html {{ background: var(--bg); }}
+  body {{
+    margin: 0; padding: 64px 24px 96px; color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    font-size: 16.5px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+  }}
+  .wrap {{ max-width: 760px; margin: 0 auto; }}
+  .toolbar {{
+    position: fixed; top: 16px; right: 24px; display: flex; gap: 12px; align-items: center;
+    background: var(--surface); border: 1px solid var(--rule);
+    padding: 8px 14px; border-radius: 999px; font-size: 13px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }}
+  .toolbar a {{ color: var(--accent); text-decoration: none; font-weight: 500; }}
+  .toolbar a:hover {{ color: var(--ink); }}
+  .toolbar .sep {{ color: var(--rule); }}
+  h1, h2, h3, h4 {{
+    font-family: 'Fraunces', 'Iowan Old Style', Georgia, serif;
+    font-weight: 500; letter-spacing: -0.01em; color: var(--ink);
+  }}
+  h1 {{ font-size: 42px; line-height: 1.1; margin: 0 0 12px; }}
+  h2 {{
+    font-size: 28px; line-height: 1.2; margin: 56px 0 16px;
+    padding-top: 28px; border-top: 1px solid var(--rule);
+  }}
+  h3 {{ font-size: 21px; margin: 32px 0 10px; }}
+  h4 {{ font-size: 17px; margin: 24px 0 6px; }}
+  p {{ margin: 0 0 16px; }}
+  p strong, li strong {{ color: var(--ink); font-weight: 600; }}
+  em {{ color: var(--ink-muted); }}
+  ul, ol {{ padding-left: 22px; margin: 0 0 16px; }}
+  li {{ margin: 6px 0; }}
+  hr {{ border: none; border-top: 1px solid var(--rule); margin: 40px 0; }}
+  blockquote {{
+    margin: 16px 0; padding: 12px 18px;
+    border-left: 3px solid var(--accent); background: var(--accent-bg);
+    color: var(--ink); font-style: italic;
+  }}
+  blockquote p {{ margin: 0; font-style: normal; }}
+  blockquote strong {{ color: var(--accent); font-weight: 600; }}
+  a {{ color: var(--accent); text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }}
+  a:hover {{ text-decoration-color: var(--accent); }}
+  code {{
+    font-family: 'JetBrains Mono', Consolas, monospace; font-size: 0.92em;
+    background: var(--rule-soft); padding: 2px 6px; border-radius: 3px;
+  }}
+  @media (max-width: 640px) {{
+    body {{ padding: 32px 16px 64px; }}
+    h1 {{ font-size: 32px; }} h2 {{ font-size: 24px; }}
+    .toolbar {{ position: static; margin-bottom: 24px; }}
+  }}
+  @media print {{ .toolbar {{ display: none; }} body {{ background: white; padding: 0; }} }}
+</style>
+</head>
+<body>
+<div class=\"toolbar\">
+  <a href=\"/review-files/{filename}\" target=\"_blank\">View source</a>
+  <span class=\"sep\">·</span>
+  <a href=\"/\" target=\"_self\">← Back to jobs</a>
+</div>
+<div class=\"wrap\">
+{html_body}
+</div>
+</body>
+</html>"""
+
+
+@app.route("/api/review/stream")
+def api_review_stream():
+    """SSE endpoint that streams progress while a company review is generated.
+
+    Query params:
+        company: required.
+
+    Events emitted:
+        {"phase": "starting"}
+        {"phase": "researching"}             # Claude generation call started
+        {"phase": "tick", "elapsed": 12}     # heartbeat every 2s
+        {"phase": "writing_files"}
+        {"phase": "done", "markdown_path": ..., "signal": ..., "tokens": ...}
+        {"phase": "error", "error": "..."}
+    """
+    import json as _json
+    import queue as _queue
+    import threading as _threading
+    import time as _time
+
+    from flask import Response, stream_with_context
+
+    company = (request.args.get("company") or "").strip()
+    if not company:
+        return jsonify({"error": "company is required"}), 400
+
+    outputs_dir = Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR))
+
+    @stream_with_context
+    def event_stream():
+        from role_radar.company_review import (
+            CompanyReviewGenerationError,
+            generate_review_for_company,
+        )
+
+        events: _queue.Queue = _queue.Queue()
+
+        def emit(payload: dict) -> None:
+            events.put(payload)
+
+        def worker() -> None:
+            try:
+                emit({"phase": "starting"})
+                hints = _resolve_company_hints(company)
+
+                emit({"phase": "researching"})
+                doc, md_path = generate_review_for_company(
+                    company=company,
+                    output_dir=outputs_dir / "reviews",
+                    homepage=hints.get("homepage"),
+                    careers_url=hints.get("careers_url"),
+                    category=hints.get("category"),
+                    funding_amount_m=hints.get("funding_amount_m"),
+                )
+
+                emit({"phase": "writing_files"})
+                emit({
+                    "phase": "done",
+                    "company": company,
+                    "markdown_path": str(md_path),
+                    "signal": doc.overall_signal,
+                    "headline": doc.headline_summary,
+                    "input_tokens": doc.input_tokens,
+                    "output_tokens": doc.output_tokens,
+                    "web_search_count": doc.web_search_count,
+                    "duration_seconds": doc.duration_seconds,
+                })
+            except CompanyReviewGenerationError as e:
+                emit({"phase": "error", "error": str(e)})
+            except Exception as e:
+                emit({"phase": "error", "error": f"Unexpected error: {e}"})
+
+        thread = _threading.Thread(target=worker, daemon=True)
+        thread.start()
+        start = _time.time()
+
+        while True:
+            try:
+                event = events.get(timeout=2.0)
+                yield f"data: {_json.dumps(event)}\n\n"
+                if event.get("phase") in ("done", "error"):
+                    break
+            except _queue.Empty:
+                if not thread.is_alive():
+                    yield f"data: {_json.dumps({'phase': 'error', 'error': 'worker exited unexpectedly'})}\n\n"
+                    break
+                yield f"data: {_json.dumps({'phase': 'tick', 'elapsed': int(_time.time() - start)})}\n\n"
+
+    return Response(
+        event_stream(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.route("/api/review/list")
+def api_list_reviews():
+    """List all previously generated company reviews so the UI can show
+    'already generated' state on each company.
+    """
+    outputs_dir = Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR))
+    reviews_dir = outputs_dir / "reviews"
+    if not reviews_dir.exists():
+        return jsonify({"reviews": []})
+
+    reviews = []
+    for p in sorted(reviews_dir.glob("*.md"), reverse=True):
+        # Filename pattern: {slug}__review_{YYYYMMDD_HHMM}.md
+        # The renderer prepends a metadata block (verdict + generated-at) before
+        # the H1, so we have to look past those lines for the actual `# ` title.
+        display = p.stem
+        try:
+            for line in p.read_text(encoding="utf-8").splitlines():
+                if line.startswith("# "):
+                    title = line[2:].strip()
+                    display = title.split(" — ")[0] if " — " in title else title
+                    break
+        except Exception:
+            pass
+        reviews.append({
+            "filename": p.name,
+            "company": display,
+            "size_bytes": p.stat().st_size,
+            "modified_iso": datetime.fromtimestamp(p.stat().st_mtime).isoformat(),
+        })
+    return jsonify({"reviews": reviews})
+
+
+# ----- Email -----------------------------------------------------------------
+
+
 @app.route("/api/email/send", methods=["POST"])
 def api_send_email():
     """API endpoint to send the job report via email."""
