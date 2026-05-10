@@ -23,7 +23,7 @@
 #   remove:
 #     - "Adept"                        # match by exact name (case-insensitive)
 
-last_updated: "2026-05-08"
+last_updated: "2026-05-09"
 
 add:
   # ===== Big Tech =====
@@ -795,6 +795,20 @@ add:
     description: "Generative AI video models (Gen-3, Gen-4)"
     notable_achievements: ["Gen-3 Alpha", "AI video generation leader"]
 
+  # ===== Added 2026-05-09 =====
+
+  - name: "World Labs"
+    homepage: "https://worldlabs.ai"
+    careers_url: "https://boards.greenhouse.io/worldlabs"
+    ats_type: greenhouse
+    ats_identifier: "worldlabs"
+    category: frontier_lab
+    funding_amount_m: 230
+    description: "Spatial intelligence — large world models from Fei-Fei Li"
+    notable_achievements: ["Founded by Fei-Fei Li", "Spatial intelligence / 3D generation"]
+
 remove:
   # Seed entry uses dead Greenhouse token "runwayml"; replaced with current Ashby board above.
   - "Runway"
+  # Seed entry has ats_type=ashby but the live board is on Greenhouse (13 jobs).
+  - "World Labs"
