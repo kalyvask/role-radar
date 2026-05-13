@@ -410,6 +410,15 @@
                     <button class="filter-chip" data-filter="applied" onclick="setFilter('applied')">Applied</button>
                     <button class="filter-chip" data-filter="disliked" onclick="setFilter('disliked')">Passed</button>
                 </div>
+
+                <!-- Age filter chips -->
+                <div class="flex flex-wrap items-center gap-2 mt-3">
+                    <span class="text-xs uppercase tracking-wider text-gray-500" style="font-weight: 600;">Posted</span>
+                    <button class="filter-chip active" data-age="all" onclick="setAgeFilter('all')">All time</button>
+                    <button class="filter-chip" data-age="7" onclick="setAgeFilter('7')">Last 7 days</button>
+                    <button class="filter-chip" data-age="14" onclick="setAgeFilter('14')">Last 14 days</button>
+                    <button class="filter-chip" data-age="30" onclick="setAgeFilter('30')">Last 30 days</button>
+                </div>
             </div>
 
             <!-- Job listings -->
@@ -467,6 +476,7 @@
         let allJobs = [];
         let filteredJobs = [];
         let currentFilter = 'all';
+        let currentAgeFilter = 'all';  // 'all' | '7' | '14' | '30' (days)
         let selectedIndex = -1;
         let currentNotesJob = null;
         let currentDislikeJob = null;
@@ -668,7 +678,26 @@
                     matchesFilter = !job.feedback;
                 }
 
-                return matchesSearch && matchesFilter;
+                // Age filter: drop anything older than the cutoff.
+                // Jobs without a posted_at are kept under 'all', dropped otherwise
+                // (better to under-show than to mislead about freshness).
+                let matchesAge = true;
+                if (currentAgeFilter !== 'all') {
+                    if (!job.posted_at) {
+                        matchesAge = false;
+                    } else {
+                        const postedAt = new Date(job.posted_at);
+                        if (isNaN(postedAt.getTime())) {
+                            matchesAge = false;
+                        } else {
+                            const ageMs = Date.now() - postedAt.getTime();
+                            const ageDays = ageMs / (1000 * 60 * 60 * 24);
+                            matchesAge = ageDays <= parseInt(currentAgeFilter, 10);
+                        }
+                    }
+                }
+
+                return matchesSearch && matchesFilter && matchesAge;
             });
 
             sortJobs();
@@ -706,8 +735,19 @@
         function setFilter(filter) {
             currentFilter = filter;
 
-            document.querySelectorAll('.filter-chip').forEach(chip => {
+            // Only toggle the status-row chips (those with data-filter), not the age-row chips.
+            document.querySelectorAll('.filter-chip[data-filter]').forEach(chip => {
                 chip.classList.toggle('active', chip.dataset.filter === filter);
+            });
+
+            filterJobs();
+        }
+
+        function setAgeFilter(age) {
+            currentAgeFilter = age;
+
+            document.querySelectorAll('.filter-chip[data-age]').forEach(chip => {
+                chip.classList.toggle('active', chip.dataset.age === age);
             });
 
             filterJobs();
