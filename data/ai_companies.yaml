@@ -23,7 +23,7 @@
 #   remove:
 #     - "Adept"                        # match by exact name (case-insensitive)
 
-last_updated: "2026-05-09"
+last_updated: "2026-05-12"
 
 add:
   # ===== Big Tech =====
@@ -806,6 +806,164 @@ add:
     funding_amount_m: 230
     description: "Spatial intelligence — large world models from Fei-Fei Li"
     notable_achievements: ["Founded by Fei-Fei Li", "Spatial intelligence / 3D generation"]
+
+  # ===== Added 2026-05-12 (Top early-stage AI startups to watch in 2026) =====
+  # Resolve AI and Periodic Labs already present above; skipped as duplicates.
+
+  - name: "Humans And"
+    homepage: "https://humansand.com"
+    careers_url: "https://jobs.ashbyhq.com/humans-and"
+    ats_type: ashby
+    ats_identifier: "humans-and"
+    category: ai_apps
+    funding_amount_m: 4500
+    description: "AI systems for human collaboration and workflows"
+
+  - name: "AMI"
+    homepage: "https://ami.ai"
+    careers_url: "https://jobs.ashbyhq.com/ami"
+    ats_type: ashby
+    ats_identifier: "ami"
+    category: frontier_lab
+    funding_amount_m: 4530
+    description: "Advanced Machine Intelligence — AI learning from real-world data (video, sensors). Paris-based"
+
+  - name: "Recursive Intelligence"
+    homepage: "https://recursivelabs.ai"
+    careers_url: "https://recursivelabs.ai"
+    ats_type: generic_html
+    category: ai_apps
+    funding_amount_m: 4000
+    description: "Self-improving AI for chip design"
+
+  - name: "Axiom Math"
+    homepage: "https://axiommath.ai"
+    careers_url: "https://jobs.ashbyhq.com/axiommath"
+    ats_type: ashby
+    ats_identifier: "axiommath"
+    category: frontier_lab
+    funding_amount_m: 1600
+    description: "AI system solving complex math problems"
+
+  - name: "Flapping Airplanes"
+    homepage: "https://flapping.com"
+    careers_url: "https://flapping.com/team"
+    ats_type: generic_html
+    category: frontier_lab
+    funding_amount_m: 1500
+    description: "AI models requiring less training data"
+
+  - name: "OpenRouter"
+    homepage: "https://openrouter.ai"
+    careers_url: "https://jobs.ashbyhq.com/openrouter"
+    ats_type: ashby
+    ats_identifier: "openrouter"
+    category: ai_infra
+    funding_amount_m: 1300
+    description: "Unified API to route between LLM providers"
+
+  - name: "Rox"
+    homepage: "https://rox.com"
+    careers_url: "https://jobs.ashbyhq.com/Rox-Data-Corp"
+    ats_type: ashby
+    ats_identifier: "Rox-Data-Corp"
+    category: ai_apps
+    funding_amount_m: 1200
+    description: "AI agents for revenue operations"
+
+  - name: "Simile"
+    homepage: "https://simile.ai"
+    careers_url: "https://jobs.ashbyhq.com/simile"
+    ats_type: ashby
+    ats_identifier: "simile"
+    category: ai_apps
+    funding_amount_m: 700
+    description: "Digital human replicas for behavioral research"
+
+  - name: "Wispr Flow"
+    homepage: "https://wisprflow.ai"
+    careers_url: "https://jobs.ashbyhq.com/wispr-flow"
+    ats_type: ashby
+    ats_identifier: "wispr-flow"
+    category: ai_apps
+    funding_amount_m: 700
+    description: "Voice-to-text AI for writing workflows"
+
+  - name: "Latent Health"
+    homepage: "https://latenthealth.com"
+    careers_url: "https://jobs.ashbyhq.com/latent"
+    ats_type: ashby
+    ats_identifier: "latent"
+    category: ai_apps
+    funding_amount_m: 600
+    description: "AI agents for healthcare insurance approvals (prior auth)"
+
+  - name: "micro1"
+    homepage: "https://micro1.ai"
+    careers_url: "https://micro1.ai/careers"
+    ats_type: generic_html
+    category: ai_infra
+    funding_amount_m: 500
+    description: "Data infrastructure and engineer marketplace for AI labs"
+
+  - name: "Irregular"
+    homepage: "https://irregular.com"
+    careers_url: "https://jobs.ashbyhq.com/Irregular"
+    ats_type: ashby
+    ats_identifier: "Irregular"
+    category: frontier_lab
+    funding_amount_m: 450
+    description: "AI red-teaming and risk evaluation. Tel Aviv"
+
+  - name: "Giga"
+    homepage: "https://gigaml.com"
+    careers_url: "https://jobs.ashbyhq.com/gigaml"
+    ats_type: ashby
+    ats_identifier: "gigaml"
+    category: ai_apps
+    funding_amount_m: 350
+    description: "AI agents for customer support"
+
+  - name: "TollBit"
+    homepage: "https://tollbit.com"
+    careers_url: "https://boards.greenhouse.io/tollbit"
+    ats_type: greenhouse
+    ats_identifier: "tollbit"
+    category: ai_infra
+    funding_amount_m: 94
+    description: "Monetization layer for AI web crawlers / publisher paywalls for LLMs"
+
+  - name: "Accordance"
+    homepage: "https://accordance.ai"
+    careers_url: "https://app.dover.com/jobs/accordance"
+    ats_type: generic_html
+    category: ai_apps
+    funding_amount_m: 80
+    description: "AI for accounting, audits, and reporting"
+
+  - name: "Certuma"
+    homepage: "https://certuma.com"
+    careers_url: "https://certuma.com"
+    ats_type: generic_html
+    category: ai_apps
+    funding_amount_m: 60
+    description: "AI for medical diagnosis and treatment planning"
+
+  - name: "Worktrace AI"
+    homepage: "https://worktrace.ai"
+    careers_url: "https://worktrace.ai"
+    ats_type: generic_html
+    category: ai_apps
+    funding_amount_m: 50
+    description: "AI that identifies automatable tasks across the org"
+
+  - name: "Nectar Social"
+    homepage: "https://nectar.social"
+    careers_url: "https://jobs.ashbyhq.com/nectar-social"
+    ats_type: ashby
+    ats_identifier: "nectar-social"
+    category: ai_apps
+    description: "AI linking social media engagement to sales conversion. Palo Alto"
 
 remove:
   # Seed entry uses dead Greenhouse token "runwayml"; replaced with current Ashby board above.
