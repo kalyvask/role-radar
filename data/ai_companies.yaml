@@ -23,7 +23,7 @@
 #   remove:
 #     - "Adept"                        # match by exact name (case-insensitive)
 
-last_updated: "2026-05-12"
+last_updated: "2026-05-12b"
 
 add:
   # ===== Big Tech =====
@@ -964,6 +964,101 @@ add:
     ats_identifier: "nectar-social"
     category: ai_apps
     description: "AI linking social media engagement to sales conversion. Palo Alto"
+
+  # ===== Added 2026-05-12 (AI infra layer: inference, evals, safety, memory, agent tools) =====
+
+  - name: "Baseten"
+    homepage: "https://baseten.co"
+    careers_url: "https://jobs.ashbyhq.com/baseten"
+    ats_type: ashby
+    ats_identifier: "baseten"
+    category: ai_infra
+    funding_amount_m: 130
+    description: "AI model deployment and inference platform"
+
+  - name: "Braintrust"
+    homepage: "https://braintrust.dev"
+    careers_url: "https://jobs.ashbyhq.com/braintrust"
+    ats_type: ashby
+    ats_identifier: "braintrust"
+    category: ai_infra
+    funding_amount_m: 36
+    description: "LLM evals + dataset platform (Series A led by a16z)"
+
+  - name: "Arize AI"
+    homepage: "https://arize.com"
+    careers_url: "https://boards.greenhouse.io/arizeai"
+    ats_type: greenhouse
+    ats_identifier: "arizeai"
+    category: ai_infra
+    funding_amount_m: 70
+    description: "ML and LLM observability — Datadog of AI"
+
+  - name: "Lakera"
+    homepage: "https://lakera.ai"
+    careers_url: "https://jobs.ashbyhq.com/lakera.ai"
+    ats_type: ashby
+    ats_identifier: "lakera.ai"
+    category: ai_infra
+    funding_amount_m: 20
+    description: "Guardrails and prompt-injection defense. Zurich (US-friendly)"
+
+  - name: "Letta"
+    homepage: "https://letta.com"
+    careers_url: "https://jobs.ashbyhq.com/letta"
+    ats_type: ashby
+    ats_identifier: "letta"
+    category: ai_infra
+    description: "Agent memory infrastructure (formerly MemGPT). UC Berkeley spinout"
+
+  - name: "Composio"
+    homepage: "https://composio.dev"
+    careers_url: "https://jobs.ashbyhq.com/composio"
+    ats_type: ashby
+    ats_identifier: "composio"
+    category: ai_infra
+    description: "Agent tool-calling infrastructure (250+ integrations)"
+
+  - name: "Helicone"
+    homepage: "https://helicone.ai"
+    careers_url: "https://www.helicone.ai/careers"
+    ats_type: generic_html
+    category: ai_infra
+    description: "LLM observability and logging (YC)"
+
+  - name: "Galileo"
+    homepage: "https://galileo.ai"
+    careers_url: "https://ats.rippling.com/galileo/jobs"
+    ats_type: generic_html
+    category: ai_infra
+    funding_amount_m: 45
+    description: "LLM evaluation and RAG quality monitoring"
+
+  - name: "Snorkel AI"
+    homepage: "https://snorkel.ai"
+    careers_url: "https://boards.greenhouse.io/snorkelai"
+    ats_type: greenhouse
+    ats_identifier: "snorkelai"
+    category: ai_infra
+    funding_amount_m: 135
+    description: "Programmatic data labeling and data-centric AI (Stanford spinout)"
+
+  - name: "Zilliz"
+    homepage: "https://zilliz.com"
+    careers_url: "https://jobs.lever.co/zilliz"
+    ats_type: lever
+    ats_identifier: "zilliz"
+    category: ai_infra
+    funding_amount_m: 113
+    description: "Managed Milvus vector database"
+
+  - name: "Qdrant"
+    homepage: "https://qdrant.tech"
+    careers_url: "https://qdrant.tech/careers"
+    ats_type: generic_html
+    category: ai_infra
+    funding_amount_m: 37
+    description: "Open-source Rust-based vector database"
 
 remove:
   # Seed entry uses dead Greenhouse token "runwayml"; replaced with current Ashby board above.
