@@ -391,19 +391,33 @@ def _passes_prefs_filter(title: str, location_raw: str, prefs: dict) -> bool:
 
     Uses preferences.yaml's `allowed_titles`, `excluded_keywords`, and
     `location`. Word-boundary matching avoids "PM" matching "deve**lopm**ent".
+
+    Title logic: an allowed-title match is the primary gate. The
+    excluded_keywords list is intended to filter borderline ambiguous
+    roles (e.g. "Engineering Manager"), but it overshoots on titles
+    like "Product Manager, Infrastructure" where `infrastructure` is
+    the feature area, not the role type. When the title contains an
+    unambiguous PM phrase ("product manager", "product mgr",
+    "head of product"), we skip the excluded check.
     """
     title_lower = title.lower()
     loc_lower = (location_raw or "").lower()
 
-    # Exclude obvious non-PM titles
-    excluded = prefs.get("excluded_keywords", [])
-    if any(_word_match(kw, title_lower) for kw in excluded):
-        return False
-
-    # Require at least one allowed-title keyword
+    # Require at least one allowed-title keyword (the primary gate)
     allowed = prefs.get("allowed_titles", [])
     if allowed and not any(_word_match(t, title_lower) for t in allowed):
         return False
+
+    # Apply excluded_keywords only to borderline titles. Strong PM
+    # signals (explicit "Product Manager" phrase or "Head of Product")
+    # are presumed real PM roles even if they mention an area that
+    # would otherwise be excluded.
+    strong_pm_signals = ("product manager", "product mgr", "head of product")
+    is_strong_pm = any(sig in title_lower for sig in strong_pm_signals)
+    if not is_strong_pm:
+        excluded = prefs.get("excluded_keywords", [])
+        if any(_word_match(kw, title_lower) for kw in excluded):
+            return False
 
     # Bay Area location filter (unless include_remote is True)
     if not prefs.get("include_remote", False):
