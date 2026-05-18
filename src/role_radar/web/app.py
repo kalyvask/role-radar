@@ -367,19 +367,189 @@ def _seniority_bucket(title: str) -> int:
     return 0
 
 
+import re as _re_filter
+
+def _word_match(keyword: str, text_lower: str) -> bool:
+    """True if `keyword` appears in `text_lower` as a whole word, not
+    embedded inside another word.
+
+    Substring matching produces false positives for short keywords
+    (e.g. "PM" matches "develoPMent", "cos" matches "COSt"). Word
+    boundaries fix this.
+    """
+    kw = keyword.strip().lower()
+    if not kw:
+        return False
+    # Escape regex specials, then anchor at word boundaries
+    pattern = r"\b" + _re_filter.escape(kw) + r"\b"
+    return _re_filter.search(pattern, text_lower) is not None
+
+
+def _passes_prefs_filter(title: str, location_raw: str, prefs: dict) -> bool:
+    """Lightweight title + location filter so the UI doesn't drown in
+    non-PM roles or non-Bay-Area roles when reading directly from the DB.
+
+    Uses preferences.yaml's `allowed_titles`, `excluded_keywords`, and
+    `location`. Word-boundary matching avoids "PM" matching "deve**lopm**ent".
+    """
+    title_lower = title.lower()
+    loc_lower = (location_raw or "").lower()
+
+    # Exclude obvious non-PM titles
+    excluded = prefs.get("excluded_keywords", [])
+    if any(_word_match(kw, title_lower) for kw in excluded):
+        return False
+
+    # Require at least one allowed-title keyword
+    allowed = prefs.get("allowed_titles", [])
+    if allowed and not any(_word_match(t, title_lower) for t in allowed):
+        return False
+
+    # Bay Area location filter (unless include_remote is True)
+    if not prefs.get("include_remote", False):
+        bay_keywords = [
+            "san francisco", "bay area", "palo alto", "mountain view",
+            "menlo park", "sunnyvale", "cupertino", "santa clara", "san jose",
+            "redwood city", "oakland", "berkeley", "fremont", "san mateo",
+            "south bay", "east bay", "peninsula", "silicon valley", "foster city",
+            "burlingame", "millbrae",
+        ]
+        # Substring is fine for cities (they don't embed in other words).
+        # "SF" handled separately as standalone to avoid matching "USF", etc.
+        is_bay = any(kw in loc_lower for kw in bay_keywords) or _word_match("sf", loc_lower)
+        if not is_bay:
+            return False
+
+    return True
+
+
+def _load_preferences() -> dict:
+    """Load preferences.yaml. Looks in (a) cwd, (b) the configured
+    OUTPUTS_DIR's parent (role-radar root), (c) the project root inferred
+    from this file's location. Falls open with an empty dict if missing.
+    """
+    try:
+        import yaml
+        # Walk up from this file to find the role-radar project root
+        here = Path(__file__).resolve()
+        project_root = here.parent.parent.parent.parent  # web/ -> role_radar/ -> src/ -> role-radar/
+
+        candidates = [
+            Path.cwd() / "preferences.yaml",
+            Path(app.config.get("OUTPUTS_DIR", DEFAULT_OUTPUTS_DIR)).parent / "preferences.yaml",
+            project_root / "preferences.yaml",
+        ]
+        for prefs_path in candidates:
+            if prefs_path.exists():
+                with open(prefs_path, encoding="utf-8") as f:
+                    return yaml.safe_load(f) or {}
+        return {}
+    except Exception:
+        return {}
+
+
 @app.route("/api/jobs")
 def api_jobs():
     """API endpoint to get jobs from the last 30 days, no cap, sorted by
-    seniority bucket (PM/junior first) then posted_date desc."""
-    all_items = load_reports_last_month()
+    seniority bucket (PM/junior first) then posted_date desc.
+
+    Reads jobs directly from the DB (storage.jobs) and overlays score
+    info from report_*.json files where available. The DB has the full
+    fresh set from the latest scrape; reports only have the email-list
+    top-N which is too narrow for browsing.
+    """
     one_month_ago = datetime.now() - timedelta(days=30)
+    prefs = _load_preferences()
 
-    jobs = []
-    for item in all_items:
+    # ---- 1. Load report scores keyed by job_id ----
+    report_index: dict[str, dict] = {}
+    for item in load_reports_last_month():
         job = item.get("job", {})
-        job_id = job.get("id", f"{job.get('company', '')}_{job.get('title', '')}")
+        jid = job.get("id", f"{job.get('company','')}_{job.get('title','')}")
+        report_index[jid] = item
 
-        # Parse posted date for filtering and sorting
+    # ---- 2. Load fresh jobs from the DB ----
+    db_jobs_data: list[dict] = []
+    try:
+        from role_radar.storage import Storage
+        from role_radar.config import load_settings
+        settings = load_settings()
+        storage = Storage(settings.cache_dir / "role_radar.db")
+        since = datetime.now() - timedelta(days=30)
+        # Get jobs fetched in the last 30 days (recent scrapes); we'll
+        # then filter to posted in the last 30 days below.
+        all_db_jobs = storage.get_jobs(since=since)
+
+        for j in all_db_jobs:
+            # Skip if posted_date is missing OR older than 30 days
+            if j.posted_date is None:
+                continue
+            posted_dt = j.posted_date.replace(tzinfo=None) if j.posted_date.tzinfo else j.posted_date
+            if posted_dt < one_month_ago:
+                continue
+
+            # Apply preferences filter (title + location)
+            if not _passes_prefs_filter(j.title, j.location.raw_location, prefs):
+                continue
+
+            # Build the job-entry dict the rest of the function expects
+            db_jobs_data.append({
+                "id": j.id,
+                "external_id": j.external_id,
+                "company": j.company,
+                "company_slug": j.company_slug,
+                "title": j.title,
+                "apply_url": j.apply_url,
+                "posted_date": j.posted_date.isoformat() if j.posted_date else None,
+                "description": j.description,
+                "location": {
+                    "raw_location": j.location.raw_location,
+                    "formatted": j.location.raw_location or "Unknown",
+                },
+                "salary": None,
+            })
+    except Exception as e:
+        # If DB is unavailable, fall back to report-only mode
+        import traceback
+        app.logger.warning(f"db_jobs_load_failed: {e}\n{traceback.format_exc()}")
+
+    # ---- 3. Merge: report scores overlay on DB jobs; report-only jobs kept too ----
+    seen: set[str] = set()
+    merged_entries: list[dict] = []
+
+    # First emit DB jobs (with report scores overlaid where matched)
+    for entry in db_jobs_data:
+        jid = entry["id"]
+        seen.add(jid)
+        report_item = report_index.get(jid)
+        merged_entries.append({
+            "job": entry,
+            "rank": report_item.get("rank") if report_item else None,
+            "score": report_item.get("score") if report_item else None,
+            "score_breakdown": report_item.get("score_breakdown", {}) if report_item else {},
+            "match_reasons": report_item.get("match_reasons", []) if report_item else [],
+            "report_date": report_item.get("report_date") if report_item else None,
+        })
+
+    # Then emit report-only jobs (e.g., older scrapes still within 30 days),
+    # but apply the same prefs filter so the queue stays focused.
+    for jid, item in report_index.items():
+        if jid in seen:
+            continue
+        job = item.get("job", {})
+        title = job.get("title", "")
+        loc = job.get("location", {})
+        loc_raw = loc.get("raw_location", "") if isinstance(loc, dict) else str(loc or "")
+        if not _passes_prefs_filter(title, loc_raw, prefs):
+            continue
+        merged_entries.append(item)
+
+    # ---- 4. Shape into the response the frontend expects ----
+    jobs = []
+    for item in merged_entries:
+        job = item.get("job", {})
+        job_id = job.get("id", f"{job.get('company','')}_{job.get('title','')}")
+
         posted_date_str = job.get("posted_date", job.get("posted_at"))
         posted_dt = None
         if posted_date_str:
@@ -388,7 +558,7 @@ def api_jobs():
                 if posted_dt.tzinfo:
                     posted_dt = posted_dt.replace(tzinfo=None)
                 if posted_dt < one_month_ago:
-                    continue  # skip roles posted more than 30 days ago
+                    continue
             except (ValueError, TypeError):
                 pass
 
@@ -416,7 +586,7 @@ def api_jobs():
             "salary_is_estimated": salary_is_estimated,
             "url": job.get("apply_url"),
             "posted_at": posted_date_str,
-            "_posted_dt": posted_dt,  # used for sorting, stripped before response
+            "_posted_dt": posted_dt,
             "_seniority_bucket": _seniority_bucket(title),
             "description": job.get("description"),
             "score_breakdown": item.get("score_breakdown", {}),
@@ -427,13 +597,11 @@ def api_jobs():
             "applied": feedback_data.get("applied", False) if feedback_data else False,
         })
 
-    # Sort: PM/junior (bucket 0) before Senior (bucket 1), then posted_date desc
     jobs.sort(key=lambda j: (
         j["_seniority_bucket"],
         -(j["_posted_dt"].timestamp() if j["_posted_dt"] else 0),
     ))
 
-    # Strip internal sort keys
     for j in jobs:
         j.pop("_posted_dt", None)
         j.pop("_seniority_bucket", None)
@@ -441,7 +609,7 @@ def api_jobs():
     return jsonify({
         "jobs": jobs,
         "total": len(jobs),
-        "report_date": jobs[0]["report_date"] if jobs else None,
+        "report_date": jobs[0]["report_date"] if jobs and jobs[0].get("report_date") else None,
         "cv_summary": {},
     })
 
