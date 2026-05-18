@@ -35,6 +35,11 @@ allowed_titles:
   - "Program Manager"
   - "Technical Program Manager"
   - "TPM"
+  # Early-stage / frontier-lab naming conventions
+  - "Founding Product"
+  - "Founding PM"
+  - "Founding Product Manager"
+  - "Head of Product"
 
 # Keywords to exclude from job titles
 excluded_keywords:

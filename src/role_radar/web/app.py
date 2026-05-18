@@ -403,17 +403,30 @@ def _passes_prefs_filter(title: str, location_raw: str, prefs: dict) -> bool:
     title_lower = title.lower()
     loc_lower = (location_raw or "").lower()
 
-    # Require at least one allowed-title keyword (the primary gate)
-    allowed = prefs.get("allowed_titles", [])
-    if allowed and not any(_word_match(t, title_lower) for t in allowed):
-        return False
+    # Special case: frontier-lab "Member of Technical Staff" naming convention.
+    # When the title contains both "member of technical staff" AND "product"
+    # (in any order, any separator), it's a PM-adjacent role at xAI / Fireworks
+    # / similar even though "MoTS" isn't itself in allowed_titles.
+    is_mots_product = (
+        "member of technical staff" in title_lower
+        and "product" in title_lower
+    )
+
+    # Require at least one allowed-title keyword (the primary gate),
+    # unless the MoTS-Product special case applies.
+    if not is_mots_product:
+        allowed = prefs.get("allowed_titles", [])
+        if allowed and not any(_word_match(t, title_lower) for t in allowed):
+            return False
 
     # Apply excluded_keywords only to borderline titles. Strong PM
-    # signals (explicit "Product Manager" phrase or "Head of Product")
-    # are presumed real PM roles even if they mention an area that
-    # would otherwise be excluded.
+    # signals (explicit "Product Manager" phrase, "Head of Product",
+    # or the MoTS-Product frontier-lab convention) are presumed real
+    # PM-track roles even if they mention an area that would otherwise
+    # be excluded — e.g. "Member of Technical Staff" trips on "Staff",
+    # "Senior PM, Infrastructure" trips on "Infrastructure".
     strong_pm_signals = ("product manager", "product mgr", "head of product")
-    is_strong_pm = any(sig in title_lower for sig in strong_pm_signals)
+    is_strong_pm = any(sig in title_lower for sig in strong_pm_signals) or is_mots_product
     if not is_strong_pm:
         excluded = prefs.get("excluded_keywords", [])
         if any(_word_match(kw, title_lower) for kw in excluded):
