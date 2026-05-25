@@ -80,6 +80,41 @@ class JobLocation(BaseModel):
         location_lower = self.raw_location.lower()
         return any(kw in location_lower for kw in sf_keywords)
 
+    def is_nyc(self) -> bool:
+        """Check if location is in the NYC metro area.
+
+        Substring matching is intentionally conservative: short tokens like
+        "NY" or "NYC" alone would false-positive on "Albany, NY" / "Anyc...",
+        so we require either a distinctive phrase, an exact city match, or a
+        word-boundary "NYC" token.
+        """
+        location_lower = self.raw_location.lower()
+
+        nyc_phrases = [
+            "new york",
+            "manhattan", "brooklyn", "queens, ny", "the bronx",
+            "harlem", "soho", "tribeca", "midtown",
+            "long island city", "jersey city", "hoboken", "newark, nj",
+        ]
+        if any(kw in location_lower for kw in nyc_phrases):
+            return True
+
+        # Word-boundary check for the NYC abbreviation so "Anyc..." won't match.
+        import re
+        if re.search(r"\bnyc\b", location_lower):
+            return True
+
+        # Explicit city + state combo
+        if self.state and self.state.strip().upper().replace(".", "") == "NY":
+            city = (self.city or "").lower()
+            nyc_cities = {
+                "new york", "new york city", "brooklyn", "queens",
+                "bronx", "manhattan",
+            }
+            if city in nyc_cities:
+                return True
+        return False
+
     def format(self) -> str:
         """Format location for display."""
         parts = []

@@ -4,7 +4,7 @@ import re
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from role_radar.config import Preferences
 from role_radar.models import (
@@ -154,29 +154,43 @@ def has_required_keywords(job: Job, required_keywords: list[str]) -> bool:
     return False
 
 
-def matches_location(job: Job, target_location: str, include_remote: bool) -> bool:
-    """Check if job matches location preferences."""
+def _matches_single_location(job: Job, target_location: str) -> bool:
+    """Check if a job matches one target location string."""
+    target_lower = target_location.lower()
+    location_lower = job.location.raw_location.lower()
+
+    # San Francisco Bay Area
+    if "san francisco" in target_lower or "bay area" in target_lower:
+        return job.location.is_sf_bay_area()
+
+    # New York metro
+    if (
+        "new york" in target_lower
+        or target_lower.strip() in {"nyc", "ny"}
+        or "manhattan" in target_lower
+    ):
+        return job.location.is_nyc()
+
+    # Generic location matching
+    return target_lower in location_lower
+
+
+def matches_location(
+    job: Job,
+    target_location: Union[str, list[str]],
+    include_remote: bool,
+) -> bool:
+    """Check if job matches location preferences.
+
+    `target_location` may be a single string or a list of strings. A job matches
+    if it satisfies ANY of the targets.
+    """
     # Remote jobs match if remote is allowed
     if job.location.remote and include_remote:
         return True
 
-    # Check if location matches target
-    location_lower = job.location.raw_location.lower()
-    target_lower = target_location.lower()
-
-    # San Francisco Bay Area matching
-    sf_keywords = [
-        "san francisco", "sf", "bay area", "palo alto", "mountain view",
-        "menlo park", "sunnyvale", "cupertino", "santa clara", "san jose",
-        "redwood city", "oakland", "berkeley", "fremont", "san mateo",
-        "south bay", "east bay", "peninsula", "silicon valley",
-    ]
-
-    if "san francisco" in target_lower or "bay area" in target_lower:
-        return any(kw in location_lower for kw in sf_keywords)
-
-    # Generic location matching
-    return target_lower in location_lower
+    targets = [target_location] if isinstance(target_location, str) else list(target_location)
+    return any(_matches_single_location(job, t) for t in targets)
 
 
 class JobScorer:
@@ -336,14 +350,24 @@ class JobScorer:
         if job.location.remote and self.preferences.include_remote:
             return 10.0
 
-        # Check location match
-        if job.location.is_sf_bay_area():
-            if "san francisco" in self.preferences.location.lower():
-                return 10.0
-            return 8.0
+        targets_lower = [t.lower() for t in self.preferences.locations]
+        sf_targeted = any("san francisco" in t or "bay area" in t for t in targets_lower)
+        nyc_targeted = any(
+            "new york" in t or t.strip() in {"nyc", "ny"} or "manhattan" in t
+            for t in targets_lower
+        )
 
-        # Hybrid with good location
+        # Check location match against any targeted region
+        if job.location.is_sf_bay_area():
+            return 10.0 if sf_targeted else 8.0
+
+        if job.location.is_nyc():
+            return 10.0 if nyc_targeted else 8.0
+
+        # Hybrid with good location (rare path — kept for parity)
         if job.location.hybrid and job.location.is_sf_bay_area():
+            return 9.0
+        if job.location.hybrid and job.location.is_nyc():
             return 9.0
 
         # Remote as fallback

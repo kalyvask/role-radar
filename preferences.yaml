@@ -1,9 +1,12 @@
 # Role Radar Preferences
 
-# Target location for job search
-location: "San Francisco Bay Area"
+# Target locations for job search.
+# Accepts a single string or a list. Jobs match if ANY listed region matches.
+location:
+  - "San Francisco Bay Area"
+  - "New York"
 
-# Include remote positions (false = Bay Area only, no fully-remote roles)
+# Include remote positions (false = listed regions only, no fully-remote roles)
 include_remote: false
 
 # Target seniority levels — PM and Senior PM only (no Staff / Principal)

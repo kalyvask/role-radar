@@ -128,6 +128,33 @@ class TestShouldExcludeJob:
         assert should_exclude_job(sample_job, ["Sales"]) is False
 
 
+class TestIsNyc:
+    def _loc(self, raw, city=None, state=None):
+        return JobLocation(raw_location=raw, city=city, state=state)
+
+    def test_new_york_city(self):
+        assert self._loc("New York, NY", city="New York", state="NY").is_nyc() is True
+
+    def test_manhattan(self):
+        assert self._loc("Manhattan, NY").is_nyc() is True
+
+    def test_brooklyn(self):
+        assert self._loc("Brooklyn, NY").is_nyc() is True
+
+    def test_nyc_abbrev(self):
+        assert self._loc("NYC").is_nyc() is True
+
+    def test_jersey_city_counted_as_metro(self):
+        assert self._loc("Jersey City, NJ").is_nyc() is True
+
+    def test_sf_not_nyc(self):
+        assert self._loc("San Francisco, CA").is_nyc() is False
+
+    def test_albany_not_nyc(self):
+        # State code NY alone shouldn't promote upstate to NYC
+        assert self._loc("Albany, NY", city="Albany", state="NY").is_nyc() is False
+
+
 class TestMatchesLocation:
     def test_matches_sf_bay_area(self, sample_job):
         assert matches_location(sample_job, "San Francisco Bay Area", True) is True
@@ -140,6 +167,39 @@ class TestMatchesLocation:
         sample_job.location.raw_location = "New York, NY"
         sample_job.location.city = "New York"
         assert matches_location(sample_job, "San Francisco Bay Area", False) is False
+
+    def test_matches_nyc(self, sample_job):
+        sample_job.location.raw_location = "New York, NY"
+        sample_job.location.city = "New York"
+        sample_job.location.state = "NY"
+        assert matches_location(sample_job, "New York", False) is True
+
+    def test_matches_nyc_boroughs(self, sample_job):
+        sample_job.location.raw_location = "Brooklyn, NY"
+        assert matches_location(sample_job, "New York", False) is True
+
+    def test_matches_multi_location_sf(self, sample_job):
+        # SF job, both regions in preferences — should match
+        assert matches_location(sample_job, ["San Francisco Bay Area", "New York"], False) is True
+
+    def test_matches_multi_location_nyc(self, sample_job):
+        sample_job.location.raw_location = "Manhattan, NY"
+        sample_job.location.city = "New York"
+        sample_job.location.state = "NY"
+        assert matches_location(sample_job, ["San Francisco Bay Area", "New York"], False) is True
+
+    def test_multi_location_rejects_other_region(self, sample_job):
+        sample_job.location.raw_location = "Austin, TX"
+        sample_job.location.city = "Austin"
+        sample_job.location.state = "TX"
+        assert matches_location(sample_job, ["San Francisco Bay Area", "New York"], False) is False
+
+    def test_albany_does_not_match_nyc(self, sample_job):
+        # ", NY" state code alone shouldn't match NYC — only NYC cities do
+        sample_job.location.raw_location = "Albany, NY"
+        sample_job.location.city = "Albany"
+        sample_job.location.state = "NY"
+        assert matches_location(sample_job, "New York", False) is False
 
 
 class TestJobScorer:
@@ -168,6 +228,26 @@ class TestJobScorer:
         score = scorer._score_location_fit(sample_job)
         assert 0 <= score <= 10
         assert score >= 8  # SF Bay Area should score high
+
+    def test_scores_nyc_when_nyc_targeted(self, sample_cv_signals, sample_job):
+        prefs = Preferences(
+            location=["San Francisco Bay Area", "New York"],
+            include_remote=False,
+        )
+        sample_job.location.raw_location = "New York, NY"
+        sample_job.location.city = "New York"
+        sample_job.location.state = "NY"
+        scorer = JobScorer(sample_cv_signals, prefs)
+        assert scorer._score_location_fit(sample_job) == 10.0
+
+    def test_scores_nyc_lower_when_only_sf_targeted(self, sample_cv_signals, sample_job):
+        prefs = Preferences(location="San Francisco Bay Area", include_remote=False)
+        sample_job.location.raw_location = "New York, NY"
+        sample_job.location.city = "New York"
+        sample_job.location.state = "NY"
+        scorer = JobScorer(sample_cv_signals, prefs)
+        # NYC still recognized but no boost since not targeted
+        assert scorer._score_location_fit(sample_job) == 8.0
 
     def test_scores_company_preference(self, sample_cv_signals, sample_preferences, sample_job):
         scorer = JobScorer(sample_cv_signals, sample_preferences)

@@ -2,11 +2,11 @@
 
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import yaml
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -42,8 +42,24 @@ class TitleRule(BaseModel):
 
 class Preferences(BaseModel):
     """User preferences for job search."""
-    location: str = "San Francisco Bay Area"
+    # Accepts a single string (back-compat) or a list of strings.
+    # Use `locations` to read as a normalized list.
+    location: Union[str, list[str]] = "San Francisco Bay Area"
     include_remote: bool = True
+
+    @field_validator("location", mode="before")
+    @classmethod
+    def _coerce_location(cls, v):
+        if v is None:
+            return "San Francisco Bay Area"
+        return v
+
+    @property
+    def locations(self) -> list[str]:
+        """Normalize `location` (str or list) into a list."""
+        if isinstance(self.location, str):
+            return [self.location]
+        return list(self.location)
     seniority: list[str] = Field(
         default_factory=lambda: ["PM", "Senior PM", "Staff PM", "Group PM"]
     )
@@ -235,8 +251,13 @@ def create_default_preferences_file(path: Path) -> None:
     template = """# Role Radar Preferences
 # Customize your job search preferences here
 
-# Target location for job search
-location: "San Francisco Bay Area"
+# Target locations for job search.
+# Accepts a single string or a list. Jobs match if ANY listed region matches.
+# Supported regions with smart matching: "San Francisco Bay Area", "New York".
+# Any other string falls back to substring matching against the job location.
+location:
+  - "San Francisco Bay Area"
+  - "New York"
 
 # Include remote positions
 include_remote: true

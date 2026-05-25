@@ -120,7 +120,14 @@ ROLE_RADAR_EMAIL_TEST_MODE=true
 Customize your job search:
 
 ```yaml
+# Single region:
 location: "San Francisco Bay Area"
+
+# Or a list — jobs match if ANY region matches:
+location:
+  - "San Francisco Bay Area"
+  - "New York"
+
 include_remote: true
 
 seniority:
@@ -140,6 +147,8 @@ excluded_keywords:
 
 max_roles_per_email: 15
 ```
+
+Supported regions with smart matching: `San Francisco Bay Area` (covers SF, Palo Alto, Mountain View, etc.) and `New York` (covers NYC boroughs plus Jersey City / Hoboken / Newark). Any other string falls back to substring matching against the job location.
 
 ### Portfolio Companies (data/portfolios.csv)
 
