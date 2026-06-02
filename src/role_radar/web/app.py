@@ -528,6 +528,7 @@ def api_jobs():
                 "title": j.title,
                 "apply_url": j.apply_url,
                 "posted_date": j.posted_date.isoformat() if j.posted_date else None,
+                "first_seen_at": j.first_seen_at.isoformat() if j.first_seen_at else None,
                 "description": j.description,
                 "location": {
                     "raw_location": j.location.raw_location,
@@ -613,6 +614,7 @@ def api_jobs():
             "salary_is_estimated": salary_is_estimated,
             "url": job.get("apply_url"),
             "posted_at": posted_date_str,
+            "first_seen_at": job.get("first_seen_at"),
             "_posted_dt": posted_dt,
             "_seniority_bucket": _seniority_bucket(title),
             "description": job.get("description"),

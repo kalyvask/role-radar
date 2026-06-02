@@ -143,6 +143,20 @@
             color: var(--surface);
             border-color: var(--ink);
         }
+        .new-badge {
+            display: inline-block;
+            margin-left: 4px;
+            min-width: 18px;
+            padding: 0 6px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 18px;
+            text-align: center;
+            color: #fff;
+            background: var(--stripe-accent, #635bff);
+            border-radius: 999px;
+        }
+        .filter-chip.active .new-badge { background: var(--surface); color: var(--ink); }
 
         /* ───── Inputs ───── */
         .search-input, .sort-select {
@@ -405,10 +419,12 @@
                 <!-- Filter chips -->
                 <div class="flex flex-wrap gap-2 mt-4">
                     <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
+                    <button class="filter-chip" data-filter="new" onclick="setFilter('new')">✨ New <span id="new-count" class="new-badge" style="display:none"></span></button>
                     <button class="filter-chip" data-filter="unreviewed" onclick="setFilter('unreviewed')">Unreviewed</button>
                     <button class="filter-chip" data-filter="liked" onclick="setFilter('liked')">Liked</button>
                     <button class="filter-chip" data-filter="applied" onclick="setFilter('applied')">Applied</button>
                     <button class="filter-chip" data-filter="disliked" onclick="setFilter('disliked')">Passed</button>
+                    <button class="filter-chip" id="mark-seen-btn" onclick="markAllSeen()" style="margin-left:auto; border-style:dashed;" title="Reset the 'new since last visit' baseline to now">Mark all seen</button>
                 </div>
 
                 <!-- Age filter chips -->
@@ -477,6 +493,33 @@
         let filteredJobs = [];
         let currentFilter = 'all';
         let currentAgeFilter = 'all';  // 'all' | '7' | '14' | '30' (days)
+
+        // "New since last visit" baseline. Read once on load and frozen for the
+        // session so refreshing the page doesn't wipe the New set. The stored
+        // baseline only advances when (a) the last visit was >1h ago, or (b) the
+        // user clicks "Mark all seen". A job is "new" if its first_seen_at is
+        // after this baseline.
+        const NEW_BASELINE_KEY = 'roleRadarLastVisit';
+        const previousVisitBaseline = (function () {
+            const now = Date.now();
+            let stored = parseInt(localStorage.getItem(NEW_BASELINE_KEY) || '0', 10);
+            if (!stored || Number.isNaN(stored)) {
+                // First-ever visit: treat anything seen in the last 3 days as new.
+                stored = now - 3 * 24 * 60 * 60 * 1000;
+            }
+            // Advance the stored baseline only if it's stale (>1h), so rapid
+            // refreshes keep showing the same "new" set within a work session.
+            if (now - stored > 60 * 60 * 1000) {
+                localStorage.setItem(NEW_BASELINE_KEY, String(now));
+            }
+            return stored;
+        })();
+
+        function isNewJob(job) {
+            if (!job.first_seen_at) return false;
+            const t = new Date(job.first_seen_at).getTime();
+            return !Number.isNaN(t) && t > previousVisitBaseline;
+        }
         let selectedIndex = -1;
         let currentNotesJob = null;
         let currentDislikeJob = null;
@@ -641,6 +684,7 @@
                 }
 
                 allJobs = data.jobs || [];
+                updateNewBadge();
                 filterJobs();
                 updateStats();
 
@@ -676,6 +720,8 @@
                     matchesFilter = job.applied;
                 } else if (currentFilter === 'unreviewed') {
                     matchesFilter = !job.feedback;
+                } else if (currentFilter === 'new') {
+                    matchesFilter = isNewJob(job);
                 }
 
                 // Age filter: drop anything older than the cutoff.
@@ -751,6 +797,26 @@
             });
 
             filterJobs();
+        }
+
+        function updateNewBadge() {
+            const count = allJobs.filter(isNewJob).length;
+            const badge = document.getElementById('new-count');
+            if (!badge) return;
+            if (count > 0) {
+                badge.textContent = count;
+                badge.style.display = 'inline-block';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function markAllSeen() {
+            // Advance the baseline to now and clear the New view. The in-memory
+            // previousVisitBaseline can't be reassigned (const), so we reload the
+            // page after writing — simplest way to re-freeze the baseline at now.
+            localStorage.setItem(NEW_BASELINE_KEY, String(Date.now()));
+            location.reload();
         }
 
         function renderJobs() {

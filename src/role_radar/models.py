@@ -180,6 +180,10 @@ class Job(BaseModel):
     # Source tracking
     source_ats: ATSType = ATSType.UNKNOWN
     fetched_at: datetime = Field(default_factory=datetime.utcnow)
+    # When role-radar first recorded this job. Set once, never overwritten,
+    # so the UI can show "new since last visit." None for rows predating the
+    # migration that lacked a backfill value.
+    first_seen_at: Optional[datetime] = None
     raw_data: Optional[dict] = None
 
     def model_post_init(self, __context) -> None:

@@ -203,6 +203,26 @@ class Storage:
             ON feedback_events(job_id)
         """)
 
+        # Migration: add first_seen_at — set once when a job first enters the DB,
+        # never overwritten on later scrapes. This is what powers the "New since
+        # last visit" filter in the UI. fetched_at, by contrast, is rewritten on
+        # every scrape so it can't distinguish a genuinely-new role from one
+        # that's simply still inside the posted-within-N-days window.
+        cursor.execute("PRAGMA table_info(jobs)")
+        job_columns = {row[1] for row in cursor.fetchall()}
+        if "first_seen_at" not in job_columns:
+            cursor.execute("ALTER TABLE jobs ADD COLUMN first_seen_at TEXT")
+            # Backfill existing rows: posted_date is the best proxy for when we'd
+            # have first recorded the job; fall back to fetched_at where missing.
+            cursor.execute(
+                "UPDATE jobs SET first_seen_at = COALESCE(posted_date, fetched_at) "
+                "WHERE first_seen_at IS NULL"
+            )
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_jobs_first_seen_at ON jobs(first_seen_at)"
+            )
+            logger.info("migration_first_seen_at_added", backfilled=cursor.rowcount)
+
         conn.commit()
         logger.debug("database_initialized", path=str(self.db_path))
 
@@ -300,20 +320,50 @@ class Storage:
         return companies
 
     def save_job(self, job: Job) -> None:
-        """Save or update a job."""
+        """Save or update a job.
+
+        Uses an upsert (INSERT ... ON CONFLICT DO UPDATE) rather than
+        INSERT OR REPLACE so that `first_seen_at` is set exactly once — on
+        the first insert — and preserved across every later scrape. Every
+        other column is refreshed on conflict so the row stays current.
+        """
         conn = self._get_conn()
         cursor = conn.cursor()
 
         raw_data_json = json.dumps(job.raw_data) if job.raw_data else None
+        fetched_at_iso = job.fetched_at.isoformat()
 
         cursor.execute("""
-            INSERT OR REPLACE INTO jobs (
+            INSERT INTO jobs (
                 id, external_id, company, company_slug, company_type,
                 title, location_raw, location_city, location_state,
                 location_country, location_remote, location_hybrid,
                 description, apply_url, posted_date, department,
-                employment_type, seniority, source_ats, fetched_at, raw_data
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                employment_type, seniority, source_ats, fetched_at, raw_data,
+                first_seen_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                external_id = excluded.external_id,
+                company = excluded.company,
+                company_slug = excluded.company_slug,
+                company_type = excluded.company_type,
+                title = excluded.title,
+                location_raw = excluded.location_raw,
+                location_city = excluded.location_city,
+                location_state = excluded.location_state,
+                location_country = excluded.location_country,
+                location_remote = excluded.location_remote,
+                location_hybrid = excluded.location_hybrid,
+                description = excluded.description,
+                apply_url = excluded.apply_url,
+                posted_date = excluded.posted_date,
+                department = excluded.department,
+                employment_type = excluded.employment_type,
+                seniority = excluded.seniority,
+                source_ats = excluded.source_ats,
+                fetched_at = excluded.fetched_at,
+                raw_data = excluded.raw_data
+                -- first_seen_at deliberately NOT updated: preserved from first insert
         """, (
             job.id,
             job.external_id,
@@ -334,8 +384,9 @@ class Storage:
             job.employment_type,
             job.seniority,
             job.source_ats.value if job.source_ats else None,
-            job.fetched_at.isoformat(),
+            fetched_at_iso,
             raw_data_json,
+            fetched_at_iso,  # first_seen_at on initial insert == this scrape's fetch time
         ))
 
         conn.commit()
@@ -385,6 +436,19 @@ class Storage:
                 except ValueError:
                     pass
 
+            first_seen_at = None
+            # Use a guarded access: the column may be absent on a DB that
+            # somehow predates the migration in this process's lifetime.
+            try:
+                fsa = row["first_seen_at"]
+            except (IndexError, KeyError):
+                fsa = None
+            if fsa:
+                try:
+                    first_seen_at = datetime.fromisoformat(fsa)
+                except ValueError:
+                    pass
+
             raw_data = None
             if row["raw_data"]:
                 try:
@@ -408,6 +472,7 @@ class Storage:
                 seniority=row["seniority"],
                 source_ats=ATSType(row["source_ats"]) if row["source_ats"] else ATSType.UNKNOWN,
                 fetched_at=datetime.fromisoformat(row["fetched_at"]),
+                first_seen_at=first_seen_at,
                 raw_data=raw_data,
             )
             jobs.append(job)
