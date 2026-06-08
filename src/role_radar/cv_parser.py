@@ -123,8 +123,10 @@ SENIORITY_PATTERNS = {
 
 def detect_seniority(titles: list[str]) -> Optional[str]:
     """Detect seniority level from job titles."""
-    # Priority order (highest first)
-    seniority_order = ["VP", "Director", "Group PM", "Principal PM", "Senior PM", "PM", "APM"]
+    # Priority order (highest first). APM must come before the generic "PM"
+    # rule: "Associate Product Manager" contains "product manager", so a PM-first
+    # order would label it "PM" before the more specific "associate product" hit.
+    seniority_order = ["VP", "Director", "Group PM", "Principal PM", "Senior PM", "APM", "PM"]
 
     combined_titles = " ".join(titles).lower()
 
@@ -143,7 +145,7 @@ def extract_titles(text: str) -> tuple[list[str], list[str]]:
     Returns (recent_titles, all_titles).
     """
     title_patterns = [
-        r"(?:^|\n)\s*((?:Senior|Sr\.?|Lead|Principal|Staff|Associate|Group|Head of|VP|Director|Manager)?\s*(?:Product Manager|PM|Technical PM|AI PM|Platform PM|Growth PM)[^,\n]*)",
+        r"(?:^|\n)\s*((?:Senior|Sr\.?|Lead|Principal|Staff|Associate|Group|Head of|VP|Director|Manager|Technical|AI|Platform|Growth)?\s*(?:Product Manager|PM|Technical PM|AI PM|Platform PM|Growth PM)[^,\n]*)",
         r"(?:title|position|role)[\s:]+([^\n,]+(?:product|pm)[^\n,]*)",
     ]
 
@@ -223,9 +225,11 @@ def extract_companies(text: str) -> list[str]:
 
 def extract_years_experience(text: str) -> Optional[int]:
     """Estimate years of experience from CV text."""
-    # Look for explicit mentions
+    # Look for explicit mentions. The first pattern allows a few words between
+    # "years of" and "experience" so "8+ years of product management experience"
+    # still resolves to 8 (not just the bare "8 years of experience" phrasing).
     patterns = [
-        r"(\d+)\+?\s*years?\s*(?:of\s+)?(?:experience|exp)",
+        r"(\d+)\+?\s*years?\s+(?:of\s+)?(?:[\w&/.-]+\s+){0,5}?(?:experience|exp)\b",
         r"(?:experience|exp)[\s:]+(\d+)\+?\s*years?",
     ]
 

@@ -21,13 +21,16 @@ def normalize_title(title: str) -> str:
     title = re.sub(r"\s*-\s*\d+\s*$", "", title)   # Trailing numbers
     title = re.sub(r"\s+", " ", title)             # Multiple spaces
 
-    # Normalize common abbreviations
+    # Normalize common abbreviations. Match the abbreviation as a whole word,
+    # then consume an optional trailing period. The period must come AFTER the
+    # closing \b: in `\bsr\.?\b`, for "sr. " the `\b` can't sit between "." and
+    # a space, so the period is left orphaned ("senior. pm"). `\bsr\b\.?` fixes it.
     replacements = [
-        (r"\bsr\.?\b", "senior"),
-        (r"\bjr\.?\b", "junior"),
-        (r"\bmgr\.?\b", "manager"),
-        (r"\beng\.?\b", "engineer"),
-        (r"\bprod\.?\b", "product"),
+        (r"\bsr\b\.?", "senior"),
+        (r"\bjr\b\.?", "junior"),
+        (r"\bmgr\b\.?", "manager"),
+        (r"\beng\b\.?", "engineer"),
+        (r"\bprod\b\.?", "product"),
     ]
     for pattern, replacement in replacements:
         title = re.sub(pattern, replacement, title)
@@ -39,13 +42,15 @@ def normalize_company(company: str) -> str:
     """Normalize a company name for comparison."""
     company = company.lower()
 
-    # Remove common suffixes
+    # Remove common legal suffixes. Each must be a separate trailing token —
+    # preceded by a comma or whitespace — so we strip ", Inc" / " Corp" but not
+    # the "corp" inside "TechCorp" (which previously collapsed to "tech").
     suffixes = [
-        r",?\s*inc\.?$",
-        r",?\s*llc\.?$",
-        r",?\s*ltd\.?$",
-        r",?\s*corp\.?$",
-        r",?\s*co\.?$",
+        r"(?:,\s*|\s+)inc\.?$",
+        r"(?:,\s*|\s+)llc\.?$",
+        r"(?:,\s*|\s+)ltd\.?$",
+        r"(?:,\s*|\s+)corp\.?$",
+        r"(?:,\s*|\s+)co\.?$",
     ]
     for suffix in suffixes:
         company = re.sub(suffix, "", company, flags=re.IGNORECASE)
