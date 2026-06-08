@@ -21,7 +21,11 @@ from datetime import date
 from typing import Iterable, Optional
 
 from role_radar.connections.models import Connection, IntroTier, WarmIntro
-from role_radar.connections.normalize import normalize_company, normalize_vc
+from role_radar.connections.normalize import (
+    is_strategic_investor,
+    normalize_company,
+    normalize_vc,
+)
 
 # Title keywords that make a connection a stronger lead.
 _SENIOR_WORDS = (
@@ -135,8 +139,12 @@ class IntroMatcher:
                 ))
                 claimed.add(id(conn))
 
-        # Tier 2: at an investor.
+        # Tier 2: at an investor. Skip mega-cap strategic investors (Google,
+        # Amazon, ...) — they back startups but employ too many people for
+        # "you know someone there" to be a real bridge into the portfolio co.
         for investor in backed_by:
+            if is_strategic_investor(investor):
+                continue
             inv_key = normalize_vc(investor)
             if not inv_key:
                 continue

@@ -56,6 +56,19 @@ _VC_ALIASES = {
     "nea": "new enterprise associates",
 }
 
+# Mega-cap strategic investors. These back many startups directly, but they
+# also employ tens of thousands of people, so "you know someone there" is not a
+# meaningful warm path *into the portfolio company*. We exclude them from Tier-2
+# bridging (a genuine colleague at the company is still surfaced as Tier 1).
+# Stored as normalize_vc() forms. Edit freely — one line per firm.
+STRATEGIC_INVESTORS = {
+    "amazon", "aws", "google", "alphabet", "microsoft", "meta", "apple",
+    "nvidia", "salesforce", "oracle", "sap", "cisco", "ibm", "intel",
+    "qualcomm", "samsung", "adobe", "databricks", "snowflake", "uber",
+    "paypal", "tencent", "alibaba", "baidu", "sony", "dell", "broadcom",
+    "servicenow", "workday", "comcast", "disney", "bytedance",
+}
+
 _PUNCT_RE = re.compile(r"[^\w\s&]+", re.UNICODE)
 _WS_RE = re.compile(r"\s+")
 
@@ -97,3 +110,12 @@ def normalize_vc(name: str) -> str:
     tokens = [t for t in base.split(" ") if t and t not in _VC_SUFFIXES]
     stripped = " ".join(tokens) if tokens else base
     return _VC_ALIASES.get(stripped, stripped)
+
+
+def is_strategic_investor(name: str) -> bool:
+    """True if `name` is a mega-cap strategic investor excluded from Tier 2.
+
+    Note: a corporate VC arm like "Google Ventures" normalizes to "gv" (a real
+    fund worth bridging), so only the parent "Google" is excluded.
+    """
+    return normalize_vc(name) in STRATEGIC_INVESTORS

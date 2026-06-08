@@ -156,6 +156,23 @@ def test_no_intros_for_unknown_company():
     assert _matcher().intros_for("Nonexistent Corp") == []
 
 
+def test_tier2_excludes_megacap_strategic_investors():
+    # A connection at Google is NOT a warm path into a Google-backed startup,
+    # so Google (a strategic investor) must not generate Tier-2 intros. A real
+    # VC in the same backed_by list still does.
+    m = IntroMatcher(
+        [
+            _conn("Googler Person", "Google", "Engineer"),
+            _conn("Vc Person", "Sequoia Capital", "Partner"),
+        ],
+        today=TODAY,
+    )
+    intros = m.intros_for("SomeStartup", backed_by=["Google", "Sequoia"])
+    names = {i.connection.full_name for i in intros}
+    assert "Googler Person" not in names
+    assert "Vc Person" in names
+
+
 def test_person_not_double_counted_across_tiers():
     # A connection who is both at the company and (hypothetically) an investor
     # is surfaced once.
