@@ -54,6 +54,7 @@ You're done. Run `role-radar run "$ROLE_RADAR_CV_PATH"` for a dry run, or jump t
 - **Curated company lists** — transparent scoring methodology for Top 20 AI companies and Top VCs
 - **Multi-ATS support** — connectors for Greenhouse, Lever, Ashby, SmartRecruiters, **Workday**, generic HTML
 - **Smart matching** — CV-based scoring across title/seniority, skills, domains, location, with a learned-preferences layer driven by like/dislike feedback
+- **Warm intros** — import your LinkedIn connections once, then every job surfaces who you know at the company (Tier 1) or at its investors (Tier 2), on the card and inside the outreach drafter
 - **Web review UI** — Flask UI to browse matches, like/dislike to train the scorer, take notes, mark applied
 - **Interview prep generator** — Claude Opus 4.7 with adaptive thinking, prompt-cached static context (frameworks, calibrations, per-company playbooks), structured Pydantic output, second-pass review critic, live SSE progress streaming, Markdown + DOCX output
 - **Company review generator** — Claude Opus 4.7 with the server-side `web_search` tool researches each company live (15-25 queries) and emits an investor-grade Markdown doc with valuation timeline chart, ARR growth chart, competitor quadrant chart, funding-rounds table, comp tables, and inline-cited press / Glassdoor / Reddit sentiment
@@ -300,6 +301,8 @@ src/role_radar/
 ├── main.py              # Typer CLI entry point
 ├── agent.py             # Stateful agent: classify, draft, follow up, decide
 ├── agent_cli.py         # `role-radar agent {triage,status,draft}` subcommands
+├── connections/         # Warm-intro layer: import network, match to companies/investors
+├── connections_cli.py   # `role-radar connections {import,list,intros}` subcommands
 ├── config.py            # Settings and preferences
 ├── cv_parser.py         # CV/resume parsing
 ├── company_sources/     # Company list generation
@@ -315,7 +318,7 @@ src/role_radar/
 ├── outreach/            # Claude-powered cold outreach drafter
 ├── scoring.py           # Job-CV matching
 ├── dedupe.py            # Deduplication
-├── storage.py           # SQLite (jobs, companies, applications, drafts, events)
+├── storage.py           # SQLite (jobs, companies, applications, drafts, events, connections)
 ├── emailer.py           # Email sending
 ├── reporting.py         # Report generation
 └── utils/
@@ -437,6 +440,46 @@ role-radar agent status
 ```
 
 The agent never sends email on its own. It generates drafts and persists them; sending is manual (or a future feature). All decisions are written to local SQLite — no remote state.
+
+## Warm intros (your network)
+
+Cold beats nothing, but warm beats cold. Once you import your professional network, Role Radar turns each job into a referral question: *who do I already know here?*
+
+Two tiers, per company:
+
+1. **Tier 1 — at the company.** Connections whose current employer is the hiring company. The most direct referral path.
+2. **Tier 2 — at the company's investors.** Connections who work at a fund that backs the company (read from `Company.backed_by`, populated from `vc_backers` in `data/portfolios.csv` and VC scoring). A warm path in when nobody on your list is inside the company yet.
+
+### Import your network
+
+Export your connections from LinkedIn (Settings → Data Privacy → Get a copy of your data → *Connections*), then:
+
+```bash
+role-radar connections import ~/Downloads/Connections.csv
+```
+
+The CSV is parsed (LinkedIn's `Notes:` preamble and `DD Mon YYYY` dates included), normalized, deduped, and stored in the local SQLite DB. Re-import any time to refresh. **Nothing leaves your machine**: the raw export and the DB are both gitignored.
+
+### See your intros
+
+```bash
+# Warm intros for one company
+role-radar connections intros --company "Anthropic"
+
+# Intros for a specific job / the top N jobs in the latest report
+role-radar connections intros --rank 1
+role-radar connections intros --top 10
+
+# Browse your imported network
+role-radar connections list --company "OpenAI"
+```
+
+Each intro is ranked by a transparent 0–100 heuristic (tier, seniority, recruiter/PM relevance, and how recently you connected). It is **not** a claim about how well you actually know someone — a LinkedIn export only exposes employer, title, and connection date.
+
+### Where intros show up
+
+- **Web UI** — every job card shows a `🤝 N` badge and a "warm intros" row (Tier 1 at the company, Tier 2 via investor), each linking to the person's LinkedIn.
+- **Outreach drafter** — `role-radar agent triage` / `draft` automatically feed the relevant intros into the prompt. The drafter is instructed to reference a shared connection **honestly** ("I see we're both connected to X") and never to fabricate "X suggested I reach out" or imply an endorsement — that claim is yours to make, not the model's to invent.
 
 ## License
 

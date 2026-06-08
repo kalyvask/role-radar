@@ -73,6 +73,7 @@ class OutreachGenerator:
         cv_excerpt: Optional[str] = None,
         voice_notes_md: Optional[str] = None,
         candidate_profile_md: Optional[str] = None,
+        warm_intros_md: Optional[str] = None,
     ) -> OutreachDraft:
         """Generate one outreach draft for a single job.
 
@@ -86,6 +87,8 @@ class OutreachGenerator:
             voice_notes_md: Optional Markdown overriding the default voice rules.
             candidate_profile_md: Optional Markdown profile of the candidate
                 for richer personalization than CV alone.
+            warm_intros_md: Optional Markdown block listing warm connections at
+                the company / its investors, with usage guidance.
 
         Returns:
             A validated `OutreachDraft` instance.
@@ -101,6 +104,7 @@ class OutreachGenerator:
             contact_name=contact_name,
             contact_role=contact_role,
             cv_excerpt=cv_excerpt,
+            warm_intros_md=warm_intros_md,
         )
 
         logger.info(
@@ -180,6 +184,7 @@ def generate_outreach_for_job(
     cv_excerpt: Optional[str] = None,
     voice_notes_md: Optional[str] = None,
     candidate_profile_md: Optional[str] = None,
+    warm_intros_md: Optional[str] = None,
     api_key: Optional[str] = None,
 ) -> OutreachDraft:
     """One-shot helper. See `OutreachGenerator.generate` for arg semantics."""
@@ -193,4 +198,5 @@ def generate_outreach_for_job(
         cv_excerpt=cv_excerpt,
         voice_notes_md=voice_notes_md,
         candidate_profile_md=candidate_profile_md,
+        warm_intros_md=warm_intros_md,
     )

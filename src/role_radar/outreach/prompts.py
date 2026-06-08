@@ -154,6 +154,7 @@ def build_user_prompt(
     contact_name: Optional[str] = None,
     contact_role: Optional[str] = None,
     cv_excerpt: Optional[str] = None,
+    warm_intros_md: Optional[str] = None,
 ) -> str:
     """Build the per-job user prompt.
 
@@ -164,6 +165,9 @@ def build_user_prompt(
         contact_name: Optional recipient name. If None, opener skips the salutation.
         contact_role: Optional recipient role label (e.g. "recruiter", "VP Eng").
         cv_excerpt: Optional raw CV text excerpt (capped at ~3K chars).
+        warm_intros_md: Optional pre-formatted Markdown block listing warm
+            connections at the company / its investors, with usage guidance.
+            Omitted entirely when None.
     """
     parts = [
         f"Draft a cold outreach email for {candidate_name} for the following role.",
@@ -187,6 +191,9 @@ def build_user_prompt(
             "## Recipient",
             "**Unknown.** No contact name. Open with the hook directly, no salutation.",
         ])
+
+    if warm_intros_md:
+        parts.extend(["", warm_intros_md.strip()])
 
     if cv_excerpt:
         capped = cv_excerpt.strip()

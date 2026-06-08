@@ -604,6 +604,46 @@
             return html;
         }
 
+        // Warm intros: connections at the company (Tier 1) or its investors (Tier 2),
+        // computed server-side from the user's imported network.
+        function renderWarmIntros(job) {
+            const intros = job.warm_intros || [];
+            if (!intros.length) return '';
+
+            const t1 = intros.filter(i => i.tier === 'at_company');
+            const t2 = intros.filter(i => i.tier === 'at_investor');
+
+            const person = (p, suffix) => {
+                const role = p.position ? ` <span class="text-gray-400">(${escapeHtml(p.position)})</span>` : '';
+                const tail = suffix ? ` <span class="text-gray-400">${escapeHtml(suffix)}</span>` : '';
+                const inner = `${escapeHtml(p.name)}${role}${tail}`;
+                const tip = p.rationale ? escapeAttr(p.rationale) : '';
+                return p.url
+                    ? `<a href="${escapeAttr(p.url)}" target="_blank" class="text-sm hover:underline" style="color: var(--accent);" onclick="event.stopPropagation()" title="${tip}">${inner}</a>`
+                    : `<span class="text-sm" title="${tip}">${inner}</span>`;
+            };
+
+            let html = '<div class="mt-3 space-y-2">';
+            if (t1.length) {
+                html += `
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-medium px-2 py-1 rounded" style="background: var(--accent); color: white;">🤝 At ${escapeHtml(job.company)}</span>
+                        ${t1.map(p => person(p, '')).join('<span class="text-gray-300">•</span>')}
+                    </div>
+                `;
+            }
+            if (t2.length) {
+                html += `
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-xs font-medium px-2 py-1 rounded" style="background: #6b7280; color: white;">🤝 Via investor</span>
+                        ${t2.map(p => person(p, p.via ? `· ${p.via}` : '')).join('<span class="text-gray-300">•</span>')}
+                    </div>
+                `;
+            }
+            html += '</div>';
+            return html;
+        }
+
         // LinkedIn company ID mapping
         const linkedInCompanyIds = {
             'anthropic': '19962912',
@@ -901,6 +941,9 @@
                             <!-- Networking section -->
                             ${renderNetworkingSection(job.company)}
 
+                            <!-- Warm intros (from imported network) -->
+                            ${renderWarmIntros(job)}
+
                             <!-- Research links -->
                             <div class="flex flex-wrap gap-2 mt-2">
                                 <a href="https://www.linkedin.com/company/${job.company.toLowerCase().replace(/\s+/g, '-')}" target="_blank" class="research-link" onclick="event.stopPropagation()">LinkedIn</a>
@@ -985,6 +1028,10 @@
             const totalContacts = (contacts.greeks?.length || 0) + (contacts.gsb?.length || 0);
             if (totalContacts > 0) {
                 badges += `<span class="company-badge" style="background: linear-gradient(135deg, #0d5eaf 0%, #8c1515 100%); color: white;">Network: ${totalContacts}</span>`;
+            }
+            const introCount = (job.warm_intros || []).length;
+            if (introCount > 0) {
+                badges += `<span class="company-badge" style="background: var(--accent); color: white;" title="Warm intros from your imported network">🤝 ${introCount}</span>`;
             }
             return badges;
         }

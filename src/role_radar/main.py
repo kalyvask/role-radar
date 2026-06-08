@@ -50,6 +50,10 @@ console = Console()
 from role_radar.agent_cli import app as agent_app
 app.add_typer(agent_app, name="agent")
 
+# Connections subcommand group: `role-radar connections import|list|intros`
+from role_radar.connections_cli import app as connections_app
+app.add_typer(connections_app, name="connections")
+
 
 def version_callback(value: bool) -> None:
     if value:

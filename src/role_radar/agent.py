@@ -196,6 +196,8 @@ class Agent:
         cv_excerpt: Optional[str] = None,
         voice_notes_md: Optional[str] = None,
         candidate_profile_md: Optional[str] = None,
+        warm_intros_md: Optional[str] = None,
+        include_warm_intros: bool = True,
         generator: Optional[OutreachGenerator] = None,
     ) -> tuple[OutreachDraft, int]:
         """Generate and persist an outreach draft for one job.
@@ -206,10 +208,18 @@ class Agent:
         - records a DRAFTED feedback event
         - persists contact info on the application if provided
 
+        Warm intros: when `include_warm_intros` is set and the caller didn't
+        pass `warm_intros_md`, the agent computes it from the imported network
+        in its own storage (Tier 1 at the company, Tier 2 at its investors).
+        Degrades to no block if no connections are imported.
+
         Raises:
             OutreachGenerationError: on any generation failure. State is not
             changed in that case.
         """
+        if warm_intros_md is None and include_warm_intros:
+            warm_intros_md = self._warm_intros_md(job)
+
         gen = generator or OutreachGenerator()
         try:
             draft = gen.generate(
@@ -221,6 +231,7 @@ class Agent:
                 cv_excerpt=cv_excerpt,
                 voice_notes_md=voice_notes_md,
                 candidate_profile_md=candidate_profile_md,
+                warm_intros_md=warm_intros_md,
             )
         except OutreachGenerationError:
             logger.warning(
@@ -375,6 +386,30 @@ class Agent:
         }
 
     # ---- internals --------------------------------------------------------
+
+    def _warm_intros_md(self, job: Job) -> Optional[str]:
+        """Build a warm-intro prompt block for a job from the stored network.
+
+        Best-effort: returns None if no connections are imported or anything
+        goes wrong, so outreach drafting never breaks because of this layer.
+        """
+        try:
+            from role_radar.connections import (
+                backers_for,
+                build_matcher,
+                format_intros_for_outreach,
+            )
+
+            matcher = build_matcher(self.storage)
+            if not matcher.connections:
+                return None
+            intros = matcher.intros_for(
+                job.company, backers_for(self.storage, job.company)
+            )
+            return format_intros_for_outreach(intros)
+        except Exception as e:  # pragma: no cover - defensive
+            logger.warning("agent_warm_intros_failed", job_id=job.id, error=str(e))
+            return None
 
     @staticmethod
     def _action_to_status(action: FeedbackAction) -> Optional[ApplicationStatus]:

@@ -54,6 +54,12 @@ outputs/
 *_CV.pdf
 data/networking_contacts.json
 
+# Personal network export (LinkedIn "Connections.csv") — never commit.
+# The imported copy lives in the gitignored *.db, so the raw file stays local too.
+Connections.csv
+**/Connections.csv
+data/connections.csv
+
 # Local-only run scripts — copy from `*.bat.example` and edit paths to your machine
 run-scrape.bat
 start-ui.bat

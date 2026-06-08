@@ -488,6 +488,13 @@ def api_jobs():
     one_month_ago = datetime.now() - timedelta(days=30)
     prefs = _load_preferences()
 
+    # Normalizer for warm-intro company keys (safe fallback if module missing).
+    try:
+        from role_radar.connections.normalize import normalize_company as _norm_co
+    except Exception:
+        def _norm_co(s):
+            return (s or "").strip().lower()
+
     # ---- 1. Load report scores keyed by job_id ----
     report_index: dict[str, dict] = {}
     for item in load_reports_last_month():
@@ -540,6 +547,37 @@ def api_jobs():
         # If DB is unavailable, fall back to report-only mode
         import traceback
         app.logger.warning(f"db_jobs_load_failed: {e}\n{traceback.format_exc()}")
+
+    # ---- 2b. Warm-intro matcher (optional; only if a network was imported) ----
+    intro_matcher = None
+    backers_map: dict[str, list[str]] = {}
+    intros_cache: dict[str, list[dict]] = {}
+    try:
+        from role_radar.connections import build_matcher
+        from role_radar.storage import Storage as _Storage
+        from role_radar.config import load_settings as _load_settings
+
+        _cs = _Storage(_load_settings().cache_dir / "role_radar.db")
+        _m = build_matcher(_cs)
+        if _m.connections:
+            intro_matcher = _m
+            for _c in _cs.get_all_companies():
+                if _c.backed_by:
+                    backers_map[_norm_co(_c.name)] = list(_c.backed_by)
+        _cs.close()
+    except Exception as e:
+        intro_matcher = None
+        app.logger.warning(f"warm_intros_unavailable: {e}")
+
+    def _warm_intros_for(company_name: str) -> list[dict]:
+        """Cached per-company warm-intro card dicts (top 6)."""
+        if intro_matcher is None or not company_name:
+            return []
+        key = _norm_co(company_name)
+        if key not in intros_cache:
+            wis = intro_matcher.intros_for(company_name, backers_map.get(key, []))
+            intros_cache[key] = [wi.to_card_dict() for wi in wis][:6]
+        return intros_cache[key]
 
     # ---- 3. Merge: report scores overlay on DB jobs; report-only jobs kept too ----
     seen: set[str] = set()
@@ -624,6 +662,7 @@ def api_jobs():
             "feedback": feedback_data.get("feedback") if feedback_data else None,
             "notes": feedback_data.get("notes") if feedback_data else None,
             "applied": feedback_data.get("applied", False) if feedback_data else False,
+            "warm_intros": _warm_intros_for(job.get("company") or ""),
         })
 
     jobs.sort(key=lambda j: (

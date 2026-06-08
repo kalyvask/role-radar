@@ -181,6 +181,27 @@ class Storage:
             )
         """)
 
+        # Connections — the user's imported professional network (e.g. a
+        # LinkedIn connections export). Used to surface warm intros: people
+        # who work at a target company (Tier 1) or at its investors (Tier 2).
+        # `employer_norm` is the normalized employer used for matching. The
+        # whole table is replaced on each import, so no migration columns.
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS connections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                full_name TEXT NOT NULL,
+                first_name TEXT,
+                last_name TEXT,
+                employer TEXT,
+                employer_norm TEXT,
+                position TEXT,
+                linkedin_url TEXT,
+                email TEXT,
+                connected_on TEXT,
+                imported_at TEXT NOT NULL
+            )
+        """)
+
         # Create indexes
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_jobs_company_slug
@@ -201,6 +222,10 @@ class Storage:
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_feedback_events_job_id
             ON feedback_events(job_id)
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_connections_employer_norm
+            ON connections(employer_norm)
         """)
 
         # Migration: add first_seen_at — set once when a job first enters the DB,
@@ -809,6 +834,59 @@ class Storage:
             fetched_at=datetime.fromisoformat(row["fetched_at"]),
             raw_data=raw_data,
         )
+
+    # ---- Connections: the user's imported network -------------------------
+
+    def replace_connections(self, rows: list[dict]) -> int:
+        """Replace the entire connections table with `rows`.
+
+        A re-import is a full refresh (the source export is authoritative), so
+        we clear and re-insert rather than upsert. Each dict must carry the
+        keys: full_name, first_name, last_name, employer, employer_norm,
+        position, linkedin_url, email, connected_on. Returns rows written.
+        """
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        now = datetime.utcnow().isoformat()
+
+        cursor.execute("DELETE FROM connections")
+        cursor.executemany("""
+            INSERT INTO connections (
+                full_name, first_name, last_name, employer, employer_norm,
+                position, linkedin_url, email, connected_on, imported_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, [
+            (
+                r.get("full_name", ""),
+                r.get("first_name"),
+                r.get("last_name"),
+                r.get("employer"),
+                r.get("employer_norm"),
+                r.get("position"),
+                r.get("linkedin_url"),
+                r.get("email"),
+                r.get("connected_on"),
+                now,
+            )
+            for r in rows
+        ])
+        conn.commit()
+        logger.info("connections_replaced", count=len(rows))
+        return len(rows)
+
+    def get_all_connections(self) -> list[dict]:
+        """Return every imported connection as a dict, newest import first."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM connections ORDER BY full_name ASC")
+        return [dict(row) for row in cursor.fetchall()]
+
+    def count_connections(self) -> int:
+        """Return how many connections are currently imported."""
+        conn = self._get_conn()
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) FROM connections")
+        return int(cursor.fetchone()[0])
 
     def close(self) -> None:
         """Close database connection."""
